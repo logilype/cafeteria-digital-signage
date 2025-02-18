@@ -6,6 +6,7 @@
     <title>CafDS Dashboard - Einstellungen</title>
     <link rel="stylesheet" href="/dashboard/styles.css">
     <link rel="icon" type="image/x-icon" href="/dashboard/assets/favicon.ico">
+    <script src="/dashboard/js/navbar.js"></script>
 </head>
 <body>
     <div class="header">
@@ -13,54 +14,121 @@
             <img src="/dashboard/assets/logo.png" alt="CafDS Logo" class="header-logo">
             <span class="header-title">CafDS Dashboard</span>
         </div>
-        <button id="logoutBtn">Ausloggen</button>
-    </div>
-    <div class="navbar" id="navbar">
-        <div class="navbar-item">
-            <a href="/panel">Home</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/offers">Angebote bearbeiten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/menu">Speiseplan verwalten/bearbeiten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/menuentries">Speiseplaneinträge verwalten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/advertising">Werbung bearbeiten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/media">Medien verwalten</a>
-        </div>
-        <div class="navbar-item-selected">
-            <a href="/panel/settings">Einstellungen</a>
+        <div class="header-buttons">
+            <button type="submit" form="settingsForm" class="action-btn">Einstellungen speichern</button>
+            <div class="header-separator"></div>
+            <button id="exportData" class="action-btn">Daten exportieren</button>
+            <button id="importData" class="action-btn">Daten importieren</button>
+            <div class="header-separator"></div>
+            <button id="logoutBtn">Ausloggen</button>
         </div>
     </div>
+    <div class="navbar" id="navbar"></div>
     <div class="content">
         <h2>Einstellungen</h2>
-        <form id="settingsForm">
-            <label for="pageSwitchInterval">Seitenwechselintervall (Sekunden):</label>
-            <input type="number" id="pageSwitchInterval" name="pageSwitchInterval" min="15" value="90" max="300">
-            <br>
-            <label for="offerDisplayDuration">Angebotsanzeigedauer (Sekunden):</label>
-            <input type="number" id="offerDisplayDuration" name="offerDisplayDuration" min="1" value="8" max="30">
-            <br>
-            <label for="language">Sprache (Andere Sprachen werden in Kürze unterstützt) (Placeholder):</label>
-            <select id="language" name="language">
-                <option value="de">Deutsch</option>
-                <!-- Add more languages as needed -->
-            </select>
-            <br>
-            <input type="submit" value="Einstellungen speichern">
-        </form>
-        <div id="feedback" style="color: green; margin-top: 10px;"></div>
-        <button id="exportData">Daten exportieren</button>
-        <button id="importData">Daten importieren</button>
-        <button id="backupSettings">Einstellungen sichern</button>
-        <button id="restoreSettings">Einstellungen wiederherstellen</button>
-        <br>
+        
+        <div class="settings-container">
+            <form id="settingsForm">
+                <!-- Display Sequence Section -->
+                <div class="settings-section">
+                    <h3>Anzeigereihenfolge</h3>
+                    <div class="form-group">
+                        <label for="pageSwitchInterval">Seitenwechselintervall (Sekunden):</label>
+                        <input type="number" id="pageSwitchInterval" name="pageSwitchInterval" min="15" value="90" max="300">
+                        <small>Zeit zwischen dem Wechsel der verschiedenen Ansichten (Angebote, Speiseplan, etc.)</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Anzeigereihenfolge:</label>
+                        <div class="display-order">
+                            <div class="order-item" draggable="true">Angebote</div>
+                            <div class="order-item" draggable="true">Speiseplan</div>
+                            <div class="order-item" draggable="true">Werbung</div>
+                            <div class="order-item" draggable="true">Nachrichten</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Offers Section -->
+                <div class="settings-section">
+                    <h3>Angebote</h3>
+                    <div class="form-group">
+                        <label for="transitionTime">Überblendungszeit zwischen Angeboten (Sekunden):</label>
+                        <input type="number" 
+                               id="transitionTime" 
+                               name="transitionTime" 
+                               min="0.1" 
+                               max="2" 
+                               value="0.5" 
+                               step="0.1"
+                               style="width: 100px;">
+                        <small>Zeit für das Ein- und Ausblenden der Angebote</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="displayTime">Anzeigedauer pro Angebot (Sekunden):</label>
+                        <input type="number" 
+                               id="displayTime" 
+                               name="displayTime" 
+                               min="3" 
+                               max="30" 
+                               value="5" 
+                               step="1"
+                               style="width: 100px;">
+                        <small>Zeit, die jedes Angebot angezeigt wird</small>
+                    </div>
+                </div>
+
+                <!-- Advertisement Section -->
+                <div class="settings-section">
+                    <h3>Werbung</h3>
+                    <div class="form-group">
+                        <label for="adTransitionTime">Überblendungszeit für Werbung (Sekunden):</label>
+                        <input type="number" 
+                               id="adTransitionTime" 
+                               name="adTransitionTime" 
+                               min="0.1" 
+                               max="2" 
+                               value="0.5" 
+                               step="0.1">
+                        <small>Zeit für das Ein- und Ausblenden der Werbung</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="adDisplayTime">Anzeigedauer pro Werbung (Sekunden):</label>
+                        <input type="number" 
+                               id="adDisplayTime" 
+                               name="adDisplayTime" 
+                               min="3" 
+                               max="30" 
+                               value="5" 
+                               step="1">
+                        <small>Zeit, die jede Werbung angezeigt wird</small>
+                    </div>
+                </div>
+
+                <!-- System Settings -->
+                <div class="settings-section">
+                    <h3>System</h3>
+                    <div class="form-group">
+                        <label for="language">Sprache:</label>
+                        <select id="language" name="language">
+                            <option value="de">Deutsch</option>
+                        </select>
+                        <small>Weitere Sprachen werden in Kürze unterstützt</small>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <input type="submit" value="Einstellungen speichern" class="primary-button">
+                </div>
+            </form>
+
+            <div class="backup-section">
+                <h3>Datensicherung</h3>
+                <button id="exportData">Daten exportieren</button>
+                <button id="importData">Daten importieren</button>
+                <button id="backupSettings">Einstellungen sichern</button>
+                <button id="restoreSettings">Einstellungen wiederherstellen</button>
+            </div>
+        </div>
     </div>
     <div class="footer">
         <a href="https://github.com/logilype/cafeteria-digital-signage" style="color: white; text-decoration: none;">© Logilype & Felixmax_ 2025</a>
@@ -106,6 +174,87 @@
                 }, 500);
             });
         });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeNavbar('settings');
+        });
     </script>
+    <style>
+    .settings-container {
+        background: var(--color-surface-a10);
+        border-radius: 10px;
+        padding: 25px;
+        max-width: 1200px;
+        margin: 0 auto;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--color-surface-a30);
+    }
+
+    #settingsForm {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .settings-section {
+        background: var(--color-surface-a20);
+        padding: 20px;
+        margin-bottom: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--color-surface-a30);
+    }
+
+    .settings-section h3 {
+        margin-top: 0;
+        margin-bottom: 15px;
+        color: var(--color-text);
+        border-bottom: 2px solid var(--color-surface-a30);
+        padding-bottom: 10px;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: var(--color-text);
+    }
+
+    .form-group small {
+        display: block;
+        color: var(--color-text-secondary);
+        margin-top: 5px;
+    }
+
+    .display-order {
+        border: 1px solid var(--color-surface-a30);
+        padding: 10px;
+        border-radius: 4px;
+    }
+
+    .order-item {
+        padding: 10px;
+        margin: 5px 0;
+        background: var(--color-surface-a30);
+        border: 1px solid var(--color-surface-a30);
+        border-radius: 4px;
+        cursor: move;
+        color: var(--color-text);
+    }
+
+    .order-item:hover {
+        background: var(--color-surface-a20);
+    }
+
+    .backup-section {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 2px solid var(--color-surface-a30);
+    }
+    </style>
 </body>
 </html>

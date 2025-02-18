@@ -5,5 +5,19 @@
     "image": "/media/default-ad.jpg",
     "description": "Entdecken Sie unsere vielfältigen Angebote!",
     "enabled": true
+  },
+  {
+    "id": "1739794071852",
+    "header": "Test",
+    "image": "",
+    "description": "123",
+    "enabled": false
+  },
+  {
+    "id": "1739794369752",
+    "header": "Test",
+    "image": "/media/MainAfter.jpg",
+    "description": "123",
+    "enabled": false
   }
 ]

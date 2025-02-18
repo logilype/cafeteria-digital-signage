@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CafDS - Playlists</title>
+    <link rel="stylesheet" href="/dashboard/styles.css">
+    <link rel="icon" type="image/x-icon" href="/dashboard/assets/favicon.ico">
+    <script src="/dashboard/js/navbar.js"></script>
+    <style>
+        .playlist-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .playlist-card {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .playlist-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .playlist-items {
+            border: 1px solid #eee;
+            border-radius: 4px;
+            min-height: 100px;
+            padding: 10px;
+        }
+
+        .playlist-item {
+            background: #f5f5f5;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .add-playlist {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 20px;
+        }
+
+        .playlist-actions button {
+            padding: 5px 10px;
+            margin-left: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .edit-btn { background: #2196F3; color: white; }
+        .delete-btn { background: #f44336; color: white; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <img src="/dashboard/assets/logo.png" alt="CafDS Logo" class="header-logo">
+            <span class="header-title">Playlists</span>
+        </div>
+    </div>
+    <div class="navbar" id="navbar"></div>
+
+    <div class="content">
+        <button class="add-playlist" onclick="createPlaylist()">Neue Playlist</button>
+        <div class="playlist-grid" id="playlistGrid"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeNavbar('playlists');
+            loadPlaylists();
+        });
+
+        async function loadPlaylists() {
+            try {
+                const response = await fetch('/api/playlists');
+                const playlists = await response.json();
+                const grid = document.getElementById('playlistGrid');
+                grid.innerHTML = '';
+
+                playlists.forEach(playlist => {
+                    const card = createPlaylistCard(playlist);
+                    grid.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Error loading playlists:', error);
+                alert('Fehler beim Laden der Playlists');
+            }
+        }
+
+        function createPlaylistCard(playlist) {
+            const card = document.createElement('div');
+            card.className = 'playlist-card';
+            card.innerHTML = `
+                <div class="playlist-header">
+                    <h3>${playlist.name}</h3>
+                    <div class="playlist-actions">
+                        <button class="edit-btn" onclick="editPlaylist('${playlist._id}')">Bearbeiten</button>
+                        <button class="delete-btn" onclick="deletePlaylist('${playlist._id}')">Löschen</button>
+                    </div>
+                </div>
+                <div class="playlist-items">
+                    ${playlist.items.map(item => `
+                        <div class="playlist-item">
+                            <span>${item.type}: ${item.id}</span>
+                            <span>${item.duration}s</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            return card;
+        }
+
+        function createPlaylist() {
+            // TODO: Implement playlist creation
+            alert('Playlist creation coming soon');
+        }
+
+        function editPlaylist(id) {
+            // TODO: Implement playlist editing
+            alert('Playlist editing coming soon');
+        }
+
+        async function deletePlaylist(id) {
+            if (!confirm('Playlist wirklich löschen?')) return;
+            try {
+                const response = await fetch(`/api/playlists/${id}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    loadPlaylists();
+                } else {
+                    throw new Error('Delete failed');
+                }
+            } catch (error) {
+                console.error('Error deleting playlist:', error);
+                alert('Fehler beim Löschen der Playlist');
+            }
+        }
+    </script>
+</body>
+</html> 

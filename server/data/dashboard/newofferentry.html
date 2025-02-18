@@ -7,6 +7,7 @@
     <link rel="icon" type="image/x-icon" href="/dashboard/assets/favicon.ico">
     <!-- Corrected font weights -->
     <link rel="stylesheet" href="/dashboard/styles.css">
+    <script src="/dashboard/js/navbar.js"></script>
 </head>
 <body>
     <div class="header">
@@ -14,31 +15,13 @@
             <img src="/dashboard/assets/logo.png" alt="CafDS Logo" class="header-logo">
             <span class="header-title">CafDS Dashboard</span>
         </div>
-        <button id="logoutBtn">Ausloggen</button>
-    </div>
-    <div class="navbar" id="navbar">
-        <div class="navbar-item">
-            <a href="/panel">Home</a>
-        </div>
-        <div class="navbar-item-selected">
-            <a href="/panel/offers">Angebote bearbeiten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/menu">Speiseplan verwalten/bearbeiten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/menuentries">Speiseplaneinträge verwalten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/advertising">Werbung bearbeiten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/media">Medien verwalten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/settings">Einstellungen</a>
+        <div class="header-buttons">
+            <button type="submit" form="newOfferForm" class="action-btn">Speichern</button>
+            <div class="header-separator"></div>
+            <button id="logoutBtn">Ausloggen</button>
         </div>
     </div>
+    <div class="navbar" id="navbar"></div>
     <div class="content">
         <form id="newOfferForm">
             <h1>Neues Angebot hinzufügen</h1>
@@ -55,8 +38,6 @@
 
             <label for="days">Tage:</label>
             <input type="text" id="days" name="days" required>
-
-            <button type="button" id="savebtn">Hinzufügen</button>
         </form>
     </div>
     <div class="footer">
@@ -104,6 +85,10 @@
                 }
             })
             .catch(error => console.error("Error creating offer:", error));
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeNavbar('offers');
         });
     </script>
 </body>

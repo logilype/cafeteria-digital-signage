@@ -6,6 +6,7 @@
     <link rel="icon" type="image/x-icon" href="/dashboard/assets/favicon.ico">
     <title>CafDS Dashboard - Medien verwalten</title>
     <link rel="stylesheet" href="/dashboard/styles.css">
+    <script src="/dashboard/js/navbar.js"></script>
 </head>
 
 <body>
@@ -14,31 +15,14 @@
             <img src="/dashboard/assets/logo.png" alt="CafDS Logo" class="header-logo">
             <span class="header-title">CafDS Dashboard</span>
         </div>
-        <button id="logoutBtn">Ausloggen</button>
-    </div>
-    <div class="navbar" id="navbar">
-        <div class="navbar-item">
-            <a href="/panel">Home</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/offers">Angebote bearbeiten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/menu">Speiseplan verwalten/bearbeiten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/menuentries">Speiseplaneinträge verwalten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/advertising">Werbung bearbeiten</a>
-        </div>
-        <div class="navbar-item-selected">
-            <a href="/panel/media">Medien verwalten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/settings">Einstellungen</a>
+        <div class="header-buttons">
+            <button onclick="document.getElementById('uploadInput').click()" class="action-btn">Neue Datei</button>
+            <button onclick="refreshMedia()" class="action-btn">Aktualisieren</button>
+            <div class="header-separator"></div>
+            <button id="logoutBtn">Ausloggen</button>
         </div>
     </div>
+    <div class="navbar" id="navbar"></div>
     <div class="content">
         <div class="tables-media">
             <table>
@@ -53,9 +37,6 @@
                     (renderanchor)
                 </tbody>
             </table>
-        </div>
-        <div class="actionbuttons">
-            <input type="button" value="Hochladen" id="newbtn">
         </div>
     </div>
     <div class="footer">
@@ -101,6 +82,11 @@
             document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
             // Redirect to the login page
             window.location.href = "/ui/login";
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeNavbar('media');
+            // existing initialization code
         });
     </script>
 </body>

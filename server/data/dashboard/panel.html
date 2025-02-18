@@ -2,11 +2,11 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CafDS Dashboard - Home</title>
-    <link rel="icon" type="image/x-icon" href="/dashboard/assets/favicon.ico">
-    <!-- Corrected font weights -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CafDS Dashboard</title>
     <link rel="stylesheet" href="/dashboard/styles.css">
+    <link rel="icon" type="image/x-icon" href="/dashboard/assets/favicon.ico">
+    <script src="/dashboard/js/navbar.js"></script>
 </head>
 <body>
     <div class="header">
@@ -14,88 +14,68 @@
             <img src="/dashboard/assets/logo.png" alt="CafDS Logo" class="header-logo">
             <span class="header-title">CafDS Dashboard</span>
         </div>
-        <button id="logoutBtn">Ausloggen</button>
-    </div>
-    <div class="navbar" id="navbar">
-        <div class="navbar-item-selected">
-            <a href="/panel">Home</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/offers">Angebote bearbeiten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/menu">Speiseplan verwalten/bearbeiten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/menuentries">Speiseplaneinträge verwalten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/advertising">Werbung bearbeiten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/media">Medien verwalten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/settings">Einstellungen</a>
+        <div class="header-buttons">
+            <button id="logoutBtn">Ausloggen</button>
         </div>
     </div>
+    <div class="navbar" id="navbar"></div>
+
     <div class="content">
-        <h1>Dashboard</h1>
+        <h1>Willkommen im CafDS Dashboard</h1>
         <div class="dashboard-stats">
             <div class="stat-card">
+                <h3>Aktive Geräte</h3>
+                <div class="stat-value" id="activeDevices">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Playlists</h3>
+                <div class="stat-value" id="playlistCount">-</div>
+            </div>
+            <div class="stat-card">
                 <h3>Aktive Angebote</h3>
-                <p class="stat-number" id="activeOffers">0</p>
-            </div>
-            <div class="stat-card">
-                <h3>Speiseplaneinträge</h3>
-                <p class="stat-number" id="menuEntries">0</p>
-            </div>
-            <div class="stat-card">
-                <h3>Aktive Werbung</h3>
-                <p class="stat-number" id="activeAds">0</p>
+                <div class="stat-value" id="activeOffers">-</div>
             </div>
         </div>
+    </div>
 
-        <div class="quick-actions">
-            <h2>Schnellzugriff</h2>
-            <div class="action-buttons">
-                <a href="/panel/offers" class="action-button">
-                    <span class="action-icon">📝</span>
-                    Angebot erstellen
-                </a>
-                <a href="/panel/menu" class="action-button">
-                    <span class="action-icon">🍽️</span>
-                    Speiseplan bearbeiten
-                </a>
-                <a href="/panel/advertising" class="action-button">
-                    <span class="action-icon">📢</span>
-                    Werbung verwalten
-                </a>
-            </div>
-        </div>
-    </div>
-    <div class="footer">
-        <a href="https://github.com/logilype/cafeteria-digital-signage" style="color: white; text-decoration: none;">© Logilype & Felixmax_ 2025</a>
-    </div>
     <script>
-        document.getElementById("logoutBtn").addEventListener("click", function() {
-            // Clear the token cookie
-            document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-            // Redirect to the login page
-            window.location.href = "/ui/login";
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeNavbar('home');
+            
+            // Logout handler
+            document.getElementById('logoutBtn').addEventListener('click', async () => {
+                try {
+                    const response = await fetch('/api/auth/logout', { method: 'POST' });
+                    if (response.ok) {
+                        window.location.href = '/ui/login';
+                    }
+                } catch (error) {
+                    console.error('Logout failed:', error);
+                }
+            });
+
+            // Load dashboard stats
+            loadStats();
         });
 
-        document.addEventListener('DOMContentLoaded', function() {
-            // Fetch statistics from your backend
-            fetch('/api/dashboard/stats')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('activeOffers').textContent = data.activeOffers;
-                    document.getElementById('menuEntries').textContent = data.menuEntries;
-                    document.getElementById('activeAds').textContent = data.activeAds;
-                })
-                .catch(error => console.error('Error fetching stats:', error));
-        });
+        async function loadStats() {
+            try {
+                const [devices, playlists, offers] = await Promise.all([
+                    fetch('/api/devices').then(r => r.json()),
+                    fetch('/api/playlists').then(r => r.json()),
+                    fetch('/api/getoffers').then(r => r.json())
+                ]);
+
+                document.getElementById('activeDevices').textContent = 
+                    devices.filter(d => d.online).length;
+                document.getElementById('playlistCount').textContent = 
+                    playlists.length;
+                document.getElementById('activeOffers').textContent = 
+                    offers.filter(o => o.visibility).length;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
     </script>
 </body>
 </html>

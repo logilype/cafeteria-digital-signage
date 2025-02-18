@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CafDS Display</title>
+    <style>
+        :root {
+            /* Base design resolution */
+            --design-width: 1920px;
+            --design-height: 1080px;
+            /* Dynamic scaling factor calculated by JS */
+            --scale: 1;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: black;
+        }
+
+        .content-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: var(--design-width);
+            height: var(--design-height);
+            transform: translate(-50%, -50%) scale(var(--scale));
+            transform-origin: center center;
+            /* Prevent blurry text during scaling */
+            backface-visibility: hidden;
+            -webkit-font-smoothing: subpixel-antialiased;
+        }
+
+        .content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: all 1s ease-in-out;
+        }
+
+        .content.active {
+            opacity: 1;
+        }
+
+        .content.fade-out {
+            opacity: 0;
+        }
+
+        .content img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .menu-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            color: white;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .offers-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 2rem;
+        }
+
+        .error-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: Arial, sans-serif;
+            display: none;
+        }
+
+        .offers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .offer-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .offer-item img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .offer-details {
+            padding: 15px;
+            text-align: center;
+        }
+
+        .offer-price {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #4CAF50;
+            margin: 10px 0;
+        }
+
+        .offer-days {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .menu-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .menu-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .menu-date {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1.2rem;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+
+        .menu-category {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .menu-item {
+            margin: 15px 0;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .menu-item:last-child {
+            border-bottom: none;
+        }
+
+        .menu-item-price {
+            color: #4CAF50;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+
+        .menu-item-allergies {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Slide transitions */
+        .content.slide-left {
+            transform: translateX(-100%);
+        }
+
+        .content.slide-right {
+            transform: translateX(100%);
+        }
+
+        .content.slide-up {
+            transform: translateY(-100%);
+        }
+
+        .content.slide-down {
+            transform: translateY(100%);
+        }
+
+        /* Fade transitions */
+        .content.fade-in {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .content.fade-out {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+
+        /* Zoom transitions */
+        .content.zoom-in {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .content.zoom-out {
+            opacity: 0;
+            transform: scale(1.1);
+        }
+
+        /* Add smooth transitions for resolution changes */
+        .content-container, .content {
+            transition: transform 0.3s ease-out;
+        }
+
+        .fallback-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            text-align: center;
+        }
+
+        .fallback-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .fallback-type {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div id="contentContainer" class="content-container"></div>
+    <div id="errorMessage" class="error-message"></div>
+
+    <script>
+        // Add scaling logic at the start of the script
+        function updateScale() {
+            const container = document.documentElement;
+            const designWidth = 1920;
+            const designHeight = 1080;
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+            
+            // Calculate scale based on both dimensions
+            const scaleX = windowWidth / designWidth;
+            const scaleY = windowHeight / designHeight;
+            const scale = Math.min(scaleX, scaleY);
+            
+            // Update CSS variable
+            container.style.setProperty('--scale', scale);
+            
+            // Update root font size for rem scaling
+            document.documentElement.style.fontSize = `${16 * scale}px`;
+        }
+
+        // Update scale on window resize
+        window.addEventListener('resize', updateScale);
+        
+        // Initial scale update
+        updateScale();
+
+        // Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(registration => console.log('ServiceWorker registered'))
+                .catch(error => console.error('ServiceWorker error:', error));
+        }
+
+        const DEVICE_TOKEN = new URLSearchParams(window.location.search).get('token');
+        if (!DEVICE_TOKEN) {
+            showError('Kein Geräte-Token gefunden');
+        }
+
+        let currentPlaylist = null;
+        let currentItemIndex = 0;
+        let contentElements = [];
+        let isTransitioning = false;
+        let ws;
+        let retryCount = 0;
+        const MAX_RETRIES = 3;
+        const RETRY_DELAY = 5000;
+
+        function connectWebSocket() {
+            ws = new WebSocket(`ws://${window.location.host}?token=${DEVICE_TOKEN}`);
+            
+            ws.onmessage = async (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'playlist_update') {
+                    currentPlaylist = data.playlist;
+                    await preloadContent();
+                    // Restart playback from beginning
+                    currentItemIndex = 0;
+                    showNextItem();
+                }
+            };
+
+            ws.onclose = () => {
+                // Attempt to reconnect after 5 seconds
+                setTimeout(connectWebSocket, 5000);
+            };
+        }
+
+        // Cache content for offline use
+        async function cacheContent(url, content) {
+            if ('caches' in window) {
+                const cache = await caches.open('cafds-content');
+                await cache.put(url, new Response(JSON.stringify(content)));
+            }
+        }
+
+        async function fetchContent(url) {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Content fetch failed');
+                const content = await response.json();
+                await cacheContent(url, content);
+                return content;
+            } catch (error) {
+                // Try to get from cache if fetch fails
+                if ('caches' in window) {
+                    const cache = await caches.open('cafds-content');
+                    const cached = await cache.match(url);
+                    if (cached) {
+                        return cached.json();
+                    }
+                }
+                throw error;
+            }
+        }
+
+        async function initializeDisplay() {
+            try {
+                await pingServer();
+                await loadPlaylist();
+                startPlayback();
+                connectWebSocket();
+                
+                // Ensure proper scaling after content loads
+                updateScale();
+                
+                // Ping server every 30 seconds
+                setInterval(pingServer, 30000);
+                
+                // Check for playlist updates every minute
+                setInterval(loadPlaylist, 60000);
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showError('Fehler beim Initialisieren der Anzeige');
+            }
+        }
+
+        async function pingServer() {
+            try {
+                const response = await fetch(`/api/devices/${DEVICE_TOKEN}/ping`, {
+                    method: 'POST'
+                });
+                if (!response.ok) throw new Error('Ping failed');
+            } catch (error) {
+                console.error('Ping error:', error);
+                showError('Verbindung zum Server verloren');
+            }
+        }
+
+        async function loadPlaylist() {
+            try {
+                const response = await fetch(`/api/devices/${DEVICE_TOKEN}/playlist`);
+                if (!response.ok) throw new Error('Failed to load playlist');
+                
+                const data = await response.json();
+                if (!data.playlist) {
+                    showError('Keine Playlist zugewiesen');
+                    return;
+                }
+
+                // Only update if playlist has changed
+                if (!currentPlaylist || currentPlaylist.id !== data.playlist.id) {
+                    currentPlaylist = data.playlist;
+                    currentItemIndex = 0;
+                    await preloadContent();
+                    retryCount = 0; // Reset retry count on successful load
+                }
+            } catch (error) {
+                console.error('Playlist loading error:', error);
+                if (retryCount < MAX_RETRIES) {
+                    retryCount++;
+                    showError(`Verbindungsfehler (Versuch ${retryCount}/${MAX_RETRIES})`);
+                    setTimeout(loadPlaylist, RETRY_DELAY);
+                } else {
+                    showError('Verbindung zum Server verloren - Offline-Modus aktiv');
+                    // Continue with cached content if available
+                    if (currentPlaylist) {
+                        showError('Verwende zwischengespeicherte Playlist');
+                    }
+                }
+            }
+        }
+
+        async function preloadContent() {
+            const container = document.getElementById('contentContainer');
+            container.innerHTML = '';
+            contentElements = [];
+
+            // Create a loading queue to load items in parallel
+            const loadingQueue = currentPlaylist.items.map(async (item) => {
+                const element = document.createElement('div');
+                element.className = 'content';
+                
+                try {
+                    // Preload content based on type
+                    switch (item.type) {
+                        case 'media':
+                            await preloadImage(item.id);
+                            element.innerHTML = `<img src="${item.id}" alt="Media content">`;
+                            break;
+                        case 'offers':
+                            const offers = await fetchContent(`/api/offers/${item.id}`);
+                            // Preload offer images
+                            await Promise.all(offers.map(offer => 
+                                offer.image ? preloadImage(offer.image) : Promise.resolve()
+                            ));
+                            element.innerHTML = renderOffers(offers);
+                            break;
+                        case 'menu':
+                            const menu = await fetchContent(`/api/menu/${item.id}`);
+                            element.innerHTML = renderMenu(menu);
+                            break;
+                        case 'ads':
+                            const ad = await fetchContent(`/api/advertisements/${item.id}`);
+                            await preloadImage(ad.image);
+                            element.innerHTML = `<img src="${ad.image}" alt="Advertisement">`;
+                            break;
+                    }
+                    return element;
+                } catch (error) {
+                    console.error(`Error preloading content for item ${item.id}:`, error);
+                    // Return fallback content for failed items
+                    element.innerHTML = renderFallbackContent(item);
+                    return element;
+                }
+            });
+
+            // Wait for all content to load
+            try {
+                const elements = await Promise.all(loadingQueue);
+                contentElements = elements;
+                elements.forEach(element => container.appendChild(element));
+            } catch (error) {
+                console.error('Error loading content:', error);
+                showError('Fehler beim Laden der Inhalte');
+            }
+        }
+
+        function renderOffers(offers) {
+            return `
+                <div class="offers-container">
+                    <div class="offers-grid">
+                        ${offers.map(offer => `
+                            <div class="offer-item">
+                                <img src="${offer.image}" alt="${offer.name}">
+                                <div class="offer-details">
+                                    <h2>${offer.name}</h2>
+                                    <div class="offer-price">${formatPrice(offer.price)} €</div>
+                                    ${offer.days ? `<div class="offer-days">${offer.days}</div>` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderMenu(menu) {
+            return `
+                <div class="menu-container">
+                    <div class="menu-header">
+                        <h1>Speiseplan</h1>
+                        <div class="menu-date">${formatDate(menu.date)}</div>
+                    </div>
+                    <div class="menu-grid">
+                        ${Object.entries(menu.items).map(([category, items]) => `
+                            <div class="menu-category">
+                                <h2>${translateCategory(category)}</h2>
+                                ${items.map(item => `
+                                    <div class="menu-item">
+                                        <div class="menu-item-name">${item.name}</div>
+                                        <div class="menu-item-price">${formatPrice(item.price)} €</div>
+                                        ${item.allergies ? `
+                                            <div class="menu-item-allergies">${item.allergies}</div>
+                                        ` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function translateCategory(category) {
+            const categories = {
+                'cafeteriaMenu1': 'Cafeteria Menü 1',
+                'cafeteriaMenu2': 'Cafeteria Menü 2',
+                'dessert': 'Dessert',
+                'salat1': 'Salat 1',
+                'salat2': 'Salat 2'
+            };
+            return categories[category] || category;
+        }
+
+        function formatPrice(price) {
+            return Number(price).toFixed(2).replace('.', ',');
+        }
+
+        function formatDate(date) {
+            return new Date(date).toLocaleDateString('de-DE', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+
+        function startPlayback() {
+            if (!currentPlaylist || currentPlaylist.items.length === 0) return;
+            
+            showNextItem();
+            setInterval(() => {
+                if (!isTransitioning) showNextItem();
+            }, 1000); // Check every second
+        }
+
+        function showNextItem() {
+            if (!contentElements.length) return;
+            
+            const currentItem = currentPlaylist.items[currentItemIndex];
+            const nextIndex = (currentItemIndex + 1) % contentElements.length;
+            
+            // Apply transition based on item settings
+            const transition = currentItem.transition || 'fade';
+            const currentElement = contentElements[currentItemIndex];
+            const nextElement = contentElements[nextIndex];
+            
+            // Remove all transition classes
+            contentElements.forEach(el => {
+                el.classList.remove('active', 'fade-in', 'fade-out', 
+                    'slide-left', 'slide-right', 'slide-up', 'slide-down',
+                    'zoom-in', 'zoom-out');
+            });
+            
+            // Apply appropriate transition classes
+            switch(transition) {
+                case 'slide-left':
+                    currentElement.classList.add('slide-left');
+                    nextElement.classList.add('slide-right', 'active');
+                    break;
+                case 'slide-up':
+                    currentElement.classList.add('slide-up');
+                    nextElement.classList.add('slide-down', 'active');
+                    break;
+                case 'zoom':
+                    currentElement.classList.add('zoom-out');
+                    nextElement.classList.add('zoom-in', 'active');
+                    break;
+                default: // fade
+                    currentElement.classList.add('fade-out');
+                    nextElement.classList.add('fade-in', 'active');
+            }
+            
+            // Update index and schedule next transition
+            currentItemIndex = nextIndex;
+            setTimeout(() => {
+                isTransitioning = true;
+                
+                setTimeout(() => {
+                    isTransitioning = false;
+                }, 1000); // Match transition duration
+            }, currentItem.duration * 1000);
+        }
+
+        function showError(message) {
+            const errorElement = document.getElementById('errorMessage');
+            // Remove any existing error messages
+            const existingErrors = errorElement.querySelectorAll('.error-item');
+            existingErrors.forEach(error => {
+                error.classList.add('fade-out');
+                setTimeout(() => error.remove(), 500);
+            });
+
+            // Add new error message
+            const errorItem = document.createElement('div');
+            errorItem.className = 'error-item';
+            errorItem.textContent = message;
+            errorElement.appendChild(errorItem);
+
+            // Show error
+            errorElement.style.display = 'block';
+            
+            // Fade out after delay
+            setTimeout(() => {
+                errorItem.classList.add('fade-out');
+                setTimeout(() => {
+                    errorItem.remove();
+                    if (!errorElement.hasChildNodes()) {
+                        errorElement.style.display = 'none';
+                    }
+                }, 500);
+            }, 5000);
+        }
+
+        // Helper function to preload images
+        function preloadImage(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = resolve;
+                img.onerror = reject;
+                img.src = src;
+            });
+        }
+
+        // Render fallback content for failed items
+        function renderFallbackContent(item) {
+            return `
+                <div class="fallback-content">
+                    <div class="fallback-icon">⚠️</div>
+                    <div class="fallback-message">
+                        Inhalt konnte nicht geladen werden
+                        <div class="fallback-type">${item.type}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Add offline detection
+        window.addEventListener('online', () => {
+            showError('Verbindung wiederhergestellt');
+            retryCount = 0;
+            loadPlaylist();
+        });
+
+        window.addEventListener('offline', () => {
+            showError('Offline - Verwende zwischengespeicherte Inhalte');
+        });
+
+        // Start the display
+        initializeDisplay();
+    </script>
+</body>
+</html> 

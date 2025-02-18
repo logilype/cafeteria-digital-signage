@@ -7,6 +7,7 @@
     <link rel="icon" type="image/x-icon" href="/dashboard/assets/favicon.ico">
     <!-- Corrected font weights -->
     <link rel="stylesheet" href="/dashboard/styles.css">
+    <script src="/dashboard/js/navbar.js"></script>
 </head>
 <body>
     <div class="header">
@@ -14,31 +15,13 @@
             <img src="/dashboard/assets/logo.png" alt="CafDS Logo" class="header-logo">
             <span class="header-title">CafDS Dashboard</span>
         </div>
-        <button id="logoutBtn">Ausloggen</button>
-    </div>
-    <div class="navbar" id="navbar">
-        <div class="navbar-item">
-            <a href="/panel">Home</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/offers">Angebote bearbeiten</a>
-        </div>
-        <div class="navbar-item-selected">
-            <a href="/panel/menu">Speiseplan verwalten/bearbeiten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/menuentries">Speiseplaneinträge verwalten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/advertising">Werbung bearbeiten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/media">Medien verwalten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/settings">Einstellungen</a>
+        <div class="header-buttons">
+            <button type="submit" form="menuForm" class="action-btn">Speichern</button>
+            <div class="header-separator"></div>
+            <button id="logoutBtn">Ausloggen</button>
         </div>
     </div>
+    <div class="navbar" id="navbar"></div>
     <div class="content">
         <!-- Insert content here -->
         <table class="styled-table" border="1" style="width: 100%; border-collapse: collapse;">
@@ -267,6 +250,7 @@
 
         // Load menu selections when the page is loaded
         document.addEventListener('DOMContentLoaded', function() {
+            initializeNavbar('menuentries');
             populateDropdowns();
             setTimeout(loadMenuSelections, 1000);
         });

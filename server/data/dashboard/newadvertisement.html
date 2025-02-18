@@ -2,10 +2,11 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CafDS Dashboard - Neue Werbung</title>
     <link rel="stylesheet" href="/dashboard/styles.css">
     <link rel="icon" type="image/x-icon" href="/dashboard/assets/favicon.ico">
+    <script src="/dashboard/js/navbar.js"></script>
 </head>
 <body>
     <div class="header">
@@ -15,30 +16,7 @@
         </div>
         <button id="logoutBtn">Ausloggen</button>
     </div>
-    <div class="navbar">
-        <!-- Same navbar as other pages -->
-        <div class="navbar-item">
-            <a href="/panel">Home</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/offers">Angebote bearbeiten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/menu">Speiseplan verwalten/bearbeiten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/menuentries">Speiseplaneinträge verwalten</a>
-        </div>
-        <div class="navbar-item-selected">
-            <a href="/panel/advertising">Werbung bearbeiten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/media">Medien verwalten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/settings">Einstellungen</a>
-        </div>
-    </div>
+    <div class="navbar" id="navbar"></div>
 
     <div class="content">
         <form id="newAdForm">
@@ -73,58 +51,61 @@
     </div>
 
     <script>
-        // Load available images
-        fetch('/api/media')
-            .then(response => response.json())
-            .then(images => {
-                const imageSelect = document.getElementById('image');
-                images.forEach(image => {
-                    const option = document.createElement('option');
-                    option.value = `/media/${image}`;
-                    option.textContent = image;
-                    imageSelect.appendChild(option);
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeNavbar('advertising');
+            // Load available images
+            fetch('/api/media')
+                .then(response => response.json())
+                .then(images => {
+                    const imageSelect = document.getElementById('image');
+                    images.forEach(image => {
+                        const option = document.createElement('option');
+                        option.value = `/media/${image}`;
+                        option.textContent = image;
+                        imageSelect.appendChild(option);
+                    });
+                })
+                .catch(error => console.error('Error loading images:', error));
+
+            // Update form submission handler
+            document.getElementById('newAdForm').addEventListener('submit', function(event) {
+                event.preventDefault();
+
+                const formData = {
+                    header: document.getElementById('header').value,
+                    image: document.getElementById('image').value,
+                    description: document.getElementById('description').value,
+                    enabled: document.getElementById('enabled').checked
+                };
+
+                fetch('/api/advertisement', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.text();
+                })
+                .then(() => {
+                    alert('Werbung erfolgreich hinzugefügt!');
+                    window.location.href = '/panel/advertising';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Fehler beim Speichern der Werbung.');
                 });
-            })
-            .catch(error => console.error('Error loading images:', error));
-
-        // Update form submission handler
-        document.getElementById('newAdForm').addEventListener('submit', function(event) {
-            event.preventDefault();
-
-            const formData = {
-                header: document.getElementById('header').value,
-                image: document.getElementById('image').value,
-                description: document.getElementById('description').value,
-                enabled: document.getElementById('enabled').checked
-            };
-
-            fetch('/api/advertisement', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(formData)
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.text();
-            })
-            .then(() => {
-                alert('Werbung erfolgreich hinzugefügt!');
-                window.location.href = '/panel/advertising';
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Fehler beim Speichern der Werbung.');
             });
-        });
 
-        // Logout button
-        document.getElementById("logoutBtn").addEventListener("click", function() {
-            document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-            window.location.href = "/ui/login";
+            // Logout button
+            document.getElementById("logoutBtn").addEventListener("click", function() {
+                document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                window.location.href = "/ui/login";
+            });
         });
     </script>
 </body>

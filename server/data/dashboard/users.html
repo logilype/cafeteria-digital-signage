@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CafDS Dashboard - Benutzer verwalten</title>
+    <link rel="stylesheet" href="/dashboard/styles.css">
+    <link rel="icon" type="image/x-icon" href="/dashboard/assets/favicon.ico">
+    <script src="/dashboard/js/navbar.js"></script>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <img src="/dashboard/assets/logo.png" alt="CafDS Logo" class="header-logo">
+            <span class="header-title">CafDS Dashboard</span>
+        </div>
+        <div class="header-buttons">
+            <button onclick="openCreateModal()" class="action-btn">Neuer Benutzer</button>
+            <div class="header-separator"></div>
+            <button id="logoutBtn">Ausloggen</button>
+        </div>
+    </div>
+    <div class="navbar" id="navbar"></div>
+    <div class="content">
+        <div class="tables-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Benutzername</th>
+                        <th>Rolle</th>
+                        <th>Letzter Login</th>
+                        <th>Status</th>
+                        <th>Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTable">
+                    <!-- Will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Create/Edit User Modal -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Benutzer erstellen</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="userForm">
+                <input type="hidden" id="userId">
+                <div class="form-group">
+                    <label for="username">Benutzername:</label>
+                    <input type="text" id="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Passwort:</label>
+                    <input type="password" id="password">
+                    <small>Leer lassen um Passwort nicht zu ändern</small>
+                </div>
+                <div class="form-group">
+                    <label for="role">Rolle:</label>
+                    <select id="role" required>
+                        <option value="admin">Administrator</option>
+                        <option value="editor">Editor</option>
+                        <option value="viewer">Betrachter</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="submit">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeNavbar('users');
+            fetchUsers();
+        });
+
+        // Fetch and display users
+        async function fetchUsers() {
+            try {
+                const response = await fetch('/api/users');
+                const users = await response.json();
+                
+                const tableBody = document.getElementById('usersTable');
+                tableBody.innerHTML = users.map(user => `
+                    <tr>
+                        <td>${user.username}</td>
+                        <td>${translateRole(user.role)}</td>
+                        <td>${formatDate(user.lastLogin)}</td>
+                        <td>${user.active ? 'Aktiv' : 'Inaktiv'}</td>
+                        <td>
+                            <button onclick="editUser('${user.id}')" class="edit-btn">Bearbeiten</button>
+                            <button onclick="toggleUserStatus('${user.id}')" class="status-btn">
+                                ${user.active ? 'Deaktivieren' : 'Aktivieren'}
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error fetching users:', error);
+            }
+        }
+
+        // Helper functions
+        function translateRole(role) {
+            const roles = {
+                'admin': 'Administrator',
+                'editor': 'Editor',
+                'viewer': 'Betrachter'
+            };
+            return roles[role] || role;
+        }
+
+        function formatDate(date) {
+            return new Date(date).toLocaleString('de-DE');
+        }
+
+        // Modal handling
+        function openCreateModal() {
+            document.getElementById('modalTitle').textContent = 'Benutzer erstellen';
+            document.getElementById('userForm').reset();
+            document.getElementById('password').required = true;
+            showModal(document.getElementById('userModal'));
+        }
+
+        async function editUser(userId) {
+            try {
+                const response = await fetch(`/api/users/${userId}`);
+                const user = await response.json();
+                
+                document.getElementById('modalTitle').textContent = 'Benutzer bearbeiten';
+                document.getElementById('userId').value = user.id;
+                document.getElementById('username').value = user.username;
+                document.getElementById('role').value = user.role;
+                document.getElementById('password').required = false;
+                
+                showModal(document.getElementById('userModal'));
+            } catch (error) {
+                console.error('Error fetching user:', error);
+            }
+        }
+
+        // Form submission
+        document.getElementById('userForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const userId = document.getElementById('userId').value;
+            const formData = {
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value,
+                role: document.getElementById('role').value
+            };
+
+            try {
+                const response = await fetch(userId ? `/api/users/${userId}` : '/api/users', {
+                    method: userId ? 'PUT' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok) {
+                    hideModal(document.getElementById('userModal'));
+                    fetchUsers();
+                } else {
+                    throw new Error('Failed to save user');
+                }
+            } catch (error) {
+                console.error('Error saving user:', error);
+            }
+        });
+
+        // User status toggle
+        async function toggleUserStatus(userId) {
+            try {
+                const response = await fetch(`/api/users/${userId}/toggle`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    fetchUsers();
+                } else {
+                    throw new Error('Failed to toggle user status');
+                }
+            } catch (error) {
+                console.error('Error toggling user status:', error);
+            }
+        }
+    </script>
+</body>
+</html> 

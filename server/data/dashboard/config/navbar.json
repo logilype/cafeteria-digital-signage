@@ -1,0 +1,64 @@
+{
+    "sections": [
+        {
+            "title": "Cafeteria-Verwaltung",
+            "items": [
+                {
+                    "id": "home",
+                    "label": "Home",
+                    "href": "/panel"
+                },
+                {
+                    "id": "offers",
+                    "label": "Angebote bearbeiten",
+                    "href": "/panel/offers"
+                },
+                {
+                    "id": "menuentries",
+                    "label": "Speiseplaneinträge verwalten",
+                    "href": "/panel/menuentries"
+                },
+                {
+                    "id": "allergies",
+                    "label": "Allergene bearbeiten",
+                    "href": "/panel/allergies"
+                }
+            ]
+        },
+        {
+            "title": "Digital Signage",
+            "items": [
+                {
+                    "id": "playlists",
+                    "label": "Playlists verwalten",
+                    "href": "/panel/playlists"
+                },
+                {
+                    "id": "devices",
+                    "label": "Geräte verwalten",
+                    "href": "/panel/devices"
+                },
+                {
+                    "id": "users",
+                    "label": "Benutzer verwalten",
+                    "href": "/panel/users"
+                },
+                {
+                    "id": "advertising",
+                    "label": "Werbung bearbeiten",
+                    "href": "/panel/advertising"
+                },
+                {
+                    "id": "media",
+                    "label": "Medien verwalten",
+                    "href": "/panel/media"
+                },
+                {
+                    "id": "settings",
+                    "label": "Einstellungen",
+                    "href": "/panel/settings"
+                }
+            ]
+        }
+    ]
+} 

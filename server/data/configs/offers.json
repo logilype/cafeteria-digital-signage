@@ -19,7 +19,7 @@
     "id": "0025652579",
     "name": "Butterbrezel",
     "price": 1.1,
-    "image": "/media/belegtes-broetchen-mit-salami.jpg",
+    "image": "/media/butterbrezel.jpg",
     "days": "Täglich",
     "visibility": true
   },
@@ -36,14 +36,16 @@
     "name": "Donuts, verschiedene Sorten",
     "price": 0.9,
     "image": "/media/donuts.jpg",
-    "days": "Täglich"
+    "days": "Täglich",
+    "visibility": true
   },
   {
     "id": "0132142145",
     "name": "Durstlöscher, verschiedene Sorten",
     "price": 0.8,
     "image": "/media/durstloescher.jpg",
-    "days": "Täglich"
+    "days": "Täglich",
+    "visibility": true
   },
   {
     "id": "2979288923",
@@ -51,7 +53,7 @@
     "price": 2,
     "image": "/media/pizza-salami.jpg",
     "days": "Dienstag",
-    "visibility": false
+    "visibility": true
   },
   {
     "id": "9155377890",
@@ -59,13 +61,13 @@
     "price": 1,
     "image": "/media/waffeln-puderzucker.jpg",
     "days": "Donnerstag",
-    "visibility": false
+    "visibility": true
   },
   {
     "id": "3224756719",
     "name": "Test",
     "price": 1,
-    "image": "/media/belegtes-broetchen-mit-kaese.jpg",
+    "image": "/media/MainAfter.jpg",
     "days": "Testtag",
     "visibility": true
   },
@@ -73,8 +75,16 @@
     "id": "1452255710",
     "name": "Currywurst mit Brötchen",
     "price": 2.5,
-    "image": "/media/belegtes-broetchen-mit-kaese.jpg",
+    "image": "/media/bratwurst.jpg",
     "days": "Montag",
+    "visibility": true
+  },
+  {
+    "id": "9386024470",
+    "name": "1234",
+    "price": 0,
+    "image": "/media/MainAfter.jpg",
+    "days": "Täglich",
     "visibility": true
   }
 ]

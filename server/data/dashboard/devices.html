@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CafDS Dashboard - Geräte verwalten</title>
+    <link rel="stylesheet" href="/dashboard/styles.css">
+    <link rel="icon" type="image/x-icon" href="/dashboard/assets/favicon.ico">
+    <script src="/dashboard/js/navbar.js"></script>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <img src="/dashboard/assets/logo.png" alt="CafDS Logo" class="header-logo">
+            <span class="header-title">CafDS Dashboard</span>
+        </div>
+        <div class="header-buttons">
+            <button onclick="openCreateModal()" class="action-btn">Neues Gerät</button>
+            <button onclick="refreshDevices()" class="action-btn">Aktualisieren</button>
+            <div class="header-separator"></div>
+            <button id="logoutBtn">Ausloggen</button>
+        </div>
+    </div>
+    <div class="navbar" id="navbar"></div>
+    <div class="content">
+        <div class="tables-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Standort</th>
+                        <th>Playlist</th>
+                        <th>Status</th>
+                        <th>Letzter Ping</th>
+                        <th>Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody id="devicesTable">
+                    <!-- Will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Create/Edit Device Modal -->
+    <div id="deviceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Gerät hinzufügen</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="deviceForm">
+                <input type="hidden" id="deviceId">
+                <div class="form-group">
+                    <label for="deviceName">Name:</label>
+                    <input type="text" id="deviceName" required>
+                </div>
+                <div class="form-group">
+                    <label for="location">Standort:</label>
+                    <input type="text" id="location" required>
+                </div>
+                <div class="form-group">
+                    <label for="playlist">Playlist:</label>
+                    <select id="playlist" required>
+                        <!-- Will be populated by JavaScript -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="orientation">Bildschirmausrichtung:</label>
+                    <select id="orientation" required>
+                        <option value="landscape">Querformat</option>
+                        <option value="portrait">Hochformat</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="deviceToken">Geräte-Token:</label>
+                    <div class="token-container">
+                        <input type="text" id="deviceToken" readonly>
+                        <button type="button" onclick="generateToken()" class="token-btn">Neu generieren</button>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeNavbar('devices');
+            fetchDevices();
+            fetchPlaylists();
+        });
+
+        async function fetchDevices() {
+            try {
+                const response = await fetch('/api/devices');
+                const devices = await response.json();
+                
+                const tableBody = document.getElementById('devicesTable');
+                tableBody.innerHTML = devices.map(device => `
+                    <tr>
+                        <td>${device.name}</td>
+                        <td>${device.location}</td>
+                        <td>${device.playlist?.name || 'Keine'}</td>
+                        <td class="status-${device.online ? 'online' : 'offline'}">
+                            ${device.online ? 'Online' : 'Offline'}
+                        </td>
+                        <td>${formatDate(device.lastPing)}</td>
+                        <td>
+                            <button onclick="editDevice('${device.id}')" class="edit-btn">Bearbeiten</button>
+                            <button onclick="deleteDevice('${device.id}')" class="delete-btn">Löschen</button>
+                            <button onclick="showQRCode('${device.token}')" class="qr-btn">QR-Code</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error fetching devices:', error);
+            }
+        }
+
+        async function fetchPlaylists() {
+            try {
+                const response = await fetch('/api/playlists');
+                const playlists = await response.json();
+                
+                const playlistSelect = document.getElementById('playlist');
+                playlistSelect.innerHTML = `
+                    <option value="">Keine Playlist</option>
+                    ${playlists.map(playlist => `
+                        <option value="${playlist.id}">${playlist.name}</option>
+                    `).join('')}
+                `;
+            } catch (error) {
+                console.error('Error fetching playlists:', error);
+            }
+        }
+
+        function generateToken() {
+            const token = Math.random().toString(36).substr(2) + 
+                         Math.random().toString(36).substr(2);
+            document.getElementById('deviceToken').value = token;
+        }
+
+        function showQRCode(token) {
+            // Implementation for QR code display
+            // Could use a library like qrcode.js
+        }
+
+        // Modal and form handling
+        function openCreateModal() {
+            document.getElementById('modalTitle').textContent = 'Gerät hinzufügen';
+            document.getElementById('deviceForm').reset();
+            generateToken();
+            showModal(document.getElementById('deviceModal'));
+        }
+
+        async function editDevice(deviceId) {
+            try {
+                const response = await fetch(`/api/devices/${deviceId}`);
+                const device = await response.json();
+                
+                document.getElementById('modalTitle').textContent = 'Gerät bearbeiten';
+                document.getElementById('deviceId').value = device.id;
+                document.getElementById('deviceName').value = device.name;
+                document.getElementById('location').value = device.location;
+                document.getElementById('playlist').value = device.playlistId || '';
+                document.getElementById('orientation').value = device.orientation;
+                document.getElementById('deviceToken').value = device.token;
+                
+                showModal(document.getElementById('deviceModal'));
+            } catch (error) {
+                console.error('Error fetching device:', error);
+            }
+        }
+
+        document.getElementById('deviceForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const deviceId = document.getElementById('deviceId').value;
+            const formData = {
+                name: document.getElementById('deviceName').value,
+                location: document.getElementById('location').value,
+                playlistId: document.getElementById('playlist').value,
+                orientation: document.getElementById('orientation').value,
+                token: document.getElementById('deviceToken').value
+            };
+
+            try {
+                const response = await fetch(deviceId ? `/api/devices/${deviceId}` : '/api/devices', {
+                    method: deviceId ? 'PUT' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok) {
+                    hideModal(document.getElementById('deviceModal'));
+                    fetchDevices();
+                } else {
+                    throw new Error('Failed to save device');
+                }
+            } catch (error) {
+                console.error('Error saving device:', error);
+            }
+        });
+
+        function formatDate(date) {
+            return new Date(date).toLocaleString('de-DE');
+        }
+    </script>
+</body>
+</html> 

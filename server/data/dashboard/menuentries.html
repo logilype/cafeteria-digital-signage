@@ -6,6 +6,7 @@
     <title>CafDS Dashboard - Speiseplaneinträge verwalten</title>
     <link rel="stylesheet" href="/dashboard/styles.css">
     <link rel="icon" type="image/x-icon" href="/dashboard/assets/favicon.ico">
+    <script src="/dashboard/js/navbar.js"></script>
 </head>
 <body>
     <div class="header">
@@ -13,31 +14,14 @@
             <img src="/dashboard/assets/logo.png" alt="CafDS Logo" class="header-logo">
             <span class="header-title">CafDS Dashboard</span>
         </div>
-        <button id="logoutBtn">Ausloggen</button>
-    </div>
-    <div class="navbar" id="navbar">
-        <div class="navbar-item">
-            <a href="/panel">Home</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/offers">Angebote bearbeiten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/menu">Speiseplan verwalten/bearbeiten</a>
-        </div>
-        <div class="navbar-item-selected">
-            <a href="/panel/menuentries">Speiseplaneinträge verwalten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/advertising">Werbung bearbeiten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/media">Medien verwalten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/settings">Einstellungen</a>
+        <div class="header-buttons">
+            <button onclick="window.location.href='/panel/menuentries/new'" class="action-btn">Neuer Eintrag</button>
+            <button onclick="refreshEntries()" class="action-btn">Aktualisieren</button>
+            <div class="header-separator"></div>
+            <button id="logoutBtn">Ausloggen</button>
         </div>
     </div>
+    <div class="navbar" id="navbar"></div>
     <div class="content">
         <div class="tables-media">
             <table>
@@ -53,9 +37,6 @@
                     <!-- Entries will be inserted here -->
                 </tbody>
             </table>
-        </div>
-        <div class="actionbuttons">
-            <input type="button" value="Neuer Eintrag" id="newEntryBtn">
         </div>
     </div>
     <div class="footer">
@@ -184,10 +165,6 @@
             }
         }
 
-        document.querySelector("#newEntryBtn").addEventListener("click", function(){
-            window.location.href = "/panel/menuentries/new";
-        });
-
         document.getElementById('editEuro').addEventListener('focus', function() {
             this.select();
         });
@@ -252,6 +229,12 @@
         document.querySelectorAll('input[type="text"]').forEach(input => {
             input.addEventListener('input', () => adjustInputFontSize(input));
             adjustInputFontSize(input); // Initial adjustment
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeNavbar('menuentries');
+            setupModalHandlers();
+            fetchMenuEntries();
         });
     </script>
 </body>

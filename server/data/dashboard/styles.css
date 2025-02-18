@@ -73,12 +73,13 @@
 
 /* Base layout */
 body {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    overflow: hidden;
     background-color: var(--color-surface-a0);
     color: var(--color-primary-a50);
     font-family: var(--font-primary);
-    margin: 0;
-    padding: 0;
-    min-height: 100vh;
     display: grid;
     grid-template-rows: 60px 1fr 40px; /* Header, content, footer */
     grid-template-columns: 250px 1fr; /* Sidebar and main content */
@@ -91,13 +92,14 @@ body {
 /* Header at top */
 .header {
     grid-area: header;
-    background-color: var(--color-primary-a10);
-    padding: 1rem;
+    background-color: var(--color-surface-mixed-a10);
+    padding: 10px 20px;
     color: white;
     display: flex;
     justify-content: space-between;
     align-items: center;
     box-sizing: border-box;
+    height: 60px;
 }
 
 .header-left {
@@ -116,15 +118,46 @@ body {
     font-weight: bold;
 }
 
+/* Add header buttons container */
+.header-buttons {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Add preview button styles */
+.preview-btn {
+    background-color: var(--color-primary-a10);
+    color: white;
+    border: none;
+    cursor: pointer;
+    padding: 7px 15px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.preview-btn:hover {
+    background-color: var(--color-primary-a20);
+}
+
+/* Update existing logout button to match new structure */
+#logoutBtn {
+    position: static; /* Remove absolute positioning */
+    background-color: #ff4d4d;
+}
+
 /* Sidebar on left */
 .navbar {
     grid-area: sidebar;
-    background-color: var(--color-surface-mixed-a10);
+    background-color: var(--color-surface-a10);
+    padding: 0.25rem;
     display: flex;
     flex-direction: column;
-    padding: 0.25rem;
-    box-sizing: border-box;
     overflow-y: auto;
+    overflow-x: hidden;
+    box-sizing: border-box;
 }
 
 .navbar-toggle {
@@ -158,32 +191,44 @@ body {
     width: 100%;
 }
 
-.navbar-item, 
-.navbar-item-selected {
-    padding: 0.75rem 1rem;
+.navbar-item, .navbar-item-selected {
+    padding: 12px 20px;
+    margin: 4px 0;
+    border-radius: 4px;
     transition: background-color 0.2s;
 }
 
-.navbar-item:hover {
-    background-color: var(--color-primary-a20);
+.navbar-item {
+    background-color: var(--color-surface-a10);
 }
 
 .navbar-item-selected {
     background-color: var(--color-primary-a20);
-    border-left: 4px solid white;
+}
+
+.navbar-item:hover {
+    background-color: var(--color-surface-a20);
+}
+
+.navbar a {
+    color: white;
+    text-decoration: none;
+    display: block;
+    width: 100%;
 }
 
 /* Main content area */
 .content {
     grid-area: main;
-    padding: 20px;
+    height: calc(100vh - 100px); /* Subtract header height */
     overflow-y: auto;
-    background: var(--color-surface-a0);
+    padding: 20px;
     box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    position: relative;
+    top: 0;
+    margin-top: 0;
+    display: block; /* Instead of flex which might cause centering */
+    background: var(--color-surface-a0);
 }
 
 /* Add container for content width control */
@@ -196,7 +241,10 @@ body {
 /* Footer at bottom */
 .footer {
     grid-area: footer;
-    background-color: var(--color-surface-mixed-a20);
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    background-color: var(--color-surface-a10);
     color: white;
     text-align: center;
     padding: 10px;
@@ -217,29 +265,10 @@ p {
     font-size: 150%;
 }
 
-.actionbuttons {
-    margin: 30px 0;
-}
-
-#logoutBtn {
-    position: absolute;
-    right: 20px;
-    background-color: #ff4d4d;
-    color: white;
-    border: none;
-    cursor: pointer;
-    padding: 7px 15px;
-    border-radius: 5px;
-}
-
-#logoutBtn:hover {
-    background-color: #b92929;
-}
-
 /* Grid Layout */
 .tables {
     width: 100%;
-    overflow-x: hidden;
+    overflow-x: auto;
 }
 
 .grid-container {
@@ -450,8 +479,7 @@ p {
 
 .selected-image {
     width: 100%;
-    height: 100%;
-    max-height: 500px;
+    height: 200px;
     background: var(--color-surface-a10);
     border: 1px solid var(--color-surface-a30);
     border-radius: 4px;
@@ -460,12 +488,13 @@ p {
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    position: relative;
 }
 
 .selected-image img {
     max-width: 100%;
     max-height: 100%;
+    width: auto;
+    height: auto;
     object-fit: contain;
 }
 
@@ -767,31 +796,6 @@ h2 {
     background-color: var(--color-surface-a10);
 }
 
-/* Action Buttons */
-.actionbuttons {
-    display: flex;
-    justify-content: center;
-    margin-top: 20px;
-}
-
-.actionbuttons input[type="button"] {
-    background-color: var(--color-primary-a20);
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    margin: 5px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 1em;
-    transition: background-color 0.3s;
-    width: 100%;
-    max-width: 200px;
-}
-
-.actionbuttons input[type="button"]:hover {
-    background-color: var(--color-primary-a30);
-}
-
 /* Dashboard Styles */
 .dashboard-stats {
     display: grid;
@@ -884,7 +888,7 @@ h2 {
     background: var(--color-surface-a10);
     border: 1px solid var(--color-surface-a30);
     border-radius: 4px;
-    max-height: 200px;
+    max-height: 300px;
     overflow-y: auto;
     width: 100%;
     z-index: 1001;
@@ -903,8 +907,8 @@ h2 {
 }
 
 .dropdown-list img {
-    max-width: 60px;
-    max-height: 40px;
+    width: 60px;
+    height: 40px;
     object-fit: contain;
 }
 
@@ -1035,16 +1039,16 @@ h2 {
 
 /* Update scrollbar styling to apply to form instead of modal */
 #editForm::-webkit-scrollbar {
-    width: 10px;
+    width: 8px;
 }
 
 #editForm::-webkit-scrollbar-track {
-    background: var(--color-surface-a0);
+    background: var(--color-surface-a10);
 }
 
 #editForm::-webkit-scrollbar-thumb {
     background: var(--color-surface-a30);
-    border-radius: 5px;
+    border-radius: 4px;
 }
 
 #editForm::-webkit-scrollbar-thumb:hover {
@@ -1103,6 +1107,10 @@ h2 {
         padding: 10px;
         z-index: 101;
     }
+
+    .selected-image {
+        height: 150px;
+    }
 }
 
 /* Add media query for larger screens */
@@ -1110,5 +1118,80 @@ h2 {
     .navbar-items {
         display: flex !important; /* Always show on larger screens */
     }
+}
+
+/* Add or update these styles */
+.header-separator {
+    width: 2px;
+    height: 24px;
+    background-color: rgba(255, 255, 255, 0.2);
+    margin: 0 5px;
+}
+
+.action-btn {
+    background-color: var(--color-surface-a20);
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.action-btn:hover {
+    background-color: var(--color-surface-a30);
+}
+
+.modal-header.edit {
+    background: var(--color-surface-mixed-a10);
+    border-bottom: 2px solid #f1c40f; /* Yellow for edit */
+}
+
+.modal-header.create {
+    background: var(--color-surface-mixed-a10);
+    border-bottom: 2px solid #2ecc71; /* Green for create */
+}
+
+/* Add custom scrollbar styling */
+.content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.content::-webkit-scrollbar-track {
+    background: var(--color-surface-a10);
+}
+
+.content::-webkit-scrollbar-thumb {
+    background: var(--color-surface-a30);
+    border-radius: 4px;
+}
+
+.content::-webkit-scrollbar-thumb:hover {
+    background: var(--color-surface-a40);
+}
+
+.navbar-section {
+    margin-bottom: 20px;
+}
+
+.navbar-section-title {
+    padding: 10px 20px;
+    font-size: 0.9em;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--color-surface-a30);
+    margin-bottom: 5px;
+}
+
+.navbar-section:not(:first-child) {
+    margin-top: 30px;
+}
+
+.navbar-item, .navbar-item-selected {
+    padding: 12px 20px;
+    margin: 4px 0;
+    border-radius: 4px;
+    transition: background-color 0.2s;
 }
 

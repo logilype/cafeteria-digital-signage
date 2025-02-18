@@ -4,10 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Cafeteria Angebote</title>
- <!-- Corrected font weights -->
     <style>
-        body,
-        html {
+        body, html {
             height: 100%;
             margin: 0;
             padding: 0;
@@ -18,12 +16,10 @@
             justify-content: center;
             align-items: center;
             font-family: 'Open Sans', sans-serif;
-            user-select: none;
-            background-color: #f0f0f0;
             font-size: 150%;
+            background-color: #f5f6fa; /* Light gray background */
+            color: #333;
             text-align: center;
-            flex-direction: column;
-            position: relative;
         }
 
         .container-table {
@@ -36,53 +32,126 @@
 
         .offers-container {
             width: 80%;
-            background-color: #fff;
+            background-color: #fff; /* Keep container white */
             border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
             padding: 20px;
         }
 
         .offer-content {
             text-align: center;
+            opacity: 1;
+            transition: opacity 0.5s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
-        img {
+        #offerImage {
             max-width: 100%;
             height: 450px;
-            object-fit: cover;
-            border-radius: 50px;
+            object-fit: contain;
+            border-radius: 20px;
+            display: block;
+            margin: 0 auto; /* Center horizontally */
+        }
+
+        .image-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
         }
 
         h2 {
             font-size: 225%;
+            margin-bottom: 20px;
+            color: #2c3e50;
         }
 
-        /* Apply transition for opacity */
-        .fade-in {
-            opacity: 0;
-            transition: opacity 0.5s;
+        #offerName {
+            font-size: 180%;
+            margin: 20px 0;
+            color: #2c3e50;
         }
 
-        .title-of-caf-institute-thing {
-            /* Mainly make the title of caf institute thing overlay on top of other things */
-            position: absolute;
-            top: 0.5%;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1;
-            font-size: 10pt;
+        #offerPrice {
+            font-size: 160%;
+            color: #27ae60;
+            margin: 15px 0;
+            font-weight: bold;
         }
 
+        #offerDays {
+            font-size: 140%;
+            color: #3498db;
+        }
+
+        @font-face {
+            font-family: 'Open Sans';
+            src: url('/dashboard/fonts/OpenSans-Regular.woff2') format('woff2'),
+                 url('/dashboard/fonts/OpenSans-Regular.woff') format('woff');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        /* Update fullscreen buttons */
+        #enterFullscreenBtn {
+            background: rgba(39, 174, 96, 0.9) !important;
+        }
+
+        #exitFullscreenBtn {
+            background: rgba(231, 76, 60, 0.9) !important;
+        }
+
+        #enterFullscreenBtn:hover {
+            background: rgba(39, 174, 96, 1) !important;
+        }
+
+        #exitFullscreenBtn:hover {
+            background: rgba(231, 76, 60, 1) !important;
+        }
     </style>
 </head>
-
 <body>
-    <h3 class="title-of-caf-institute-thing">Cafeteria im Schulzentrum</h3>
+    <div id="fullscreenPrompt" style="
+        display: none;
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        z-index: 1000;">
+        <button id="enterFullscreenBtn" onclick="enterFullscreen()" style="
+            padding: 10px 20px;
+            background: rgba(39, 174, 96, 0.9);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;">
+            Vollbildmodus aktivieren
+        </button>
+        <button id="exitFullscreenBtn" onclick="exitFullscreen()" style="
+            display: none;
+            padding: 10px 20px;
+            background: rgba(231, 76, 60, 0.9);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;">
+            Vollbildmodus beenden
+        </button>
+    </div>
     <div class="container-table">
         <div class="offers-container">
             <h2>Angebote</h2>
             <div class="offer-content" id="offerContent">
-                <img id="offerImage" src="" alt="Angebotsbild">
+                <div class="image-container">
+                    <img id="offerImage" src="" alt="Angebotsbild" onerror="this.style.display='none'">
+                </div>
                 <p id="offerName"></p>
                 <p id="offerPrice"></p>
                 <p id="offerDays"></p>
@@ -91,7 +160,7 @@
     </div>
 
     <script>
-        var offers = (datarenderplace);
+        var offers = []; // Will be replaced by server
         var currentOfferIndex = 0;
         var offerContent = document.getElementById("offerContent");
         var offerImage = document.getElementById("offerImage");
@@ -102,44 +171,108 @@
         function fadeIn(element) {
             element.style.opacity = 0;
             element.style.transition = 'opacity 0s';
-            requestAnimationFrame(function () {
+            requestAnimationFrame(function() {
                 element.style.transition = 'opacity 0.5s';
                 element.style.opacity = 1;
             });
         }
 
         function updateOffer() {
-            var offer = offers[currentOfferIndex];
-
+            if (offers.length === 0) return;
+            
             offerContent.style.opacity = 0;
 
-            setTimeout(function () {
-                offerImage.src = offer.image;
+            setTimeout(function() {
+                var offer = offers[currentOfferIndex];
+                console.log('Loading image:', offer.image);
+                offerImage.src = offer.image.startsWith('/') ? offer.image : '/media/' + offer.image;
+                offerImage.onerror = function() {
+                    console.error('Failed to load image:', offer.image);
+                    this.style.display = 'none';
+                };
+                offerImage.onload = function() {
+                    this.style.display = 'block';
+                };
                 offerName.textContent = offer.name;
-                offerPrice.textContent = offer.price.toFixed(2).replace('.', ',') + '&nbsp;€';
+                offerPrice.innerHTML = offer.price.toFixed(2).replace('.', ',') + '&nbsp;€';
                 offerDays.textContent = "Im Angebot: " + offer.days;
                 fadeIn(offerContent);
                 currentOfferIndex = (currentOfferIndex + 1) % offers.length;
             }, 500);
         }
 
-        // Fetch settings from the server
-        fetch('http://localhost:3000/api/settings')
-            .then(response => response.json())
-            .then(settings => {
-                var offerDisplayDuration = parseInt(settings.offerDisplayDuration, 10) * 1000; // Convert to milliseconds
-                // Initial call to set the first offer
-                updateOffer();
-                // Set an interval to cycle through offers
-                setInterval(updateOffer, offerDisplayDuration);
-            })
-            .catch(error => {
+        // Add settings fetch at the start
+        async function fetchSettings() {
+            try {
+                const response = await fetch('/api/settings');
+                const settings = await response.json();
+                return {
+                    transitionTime: (settings.transitionTime || 5) * 1000,
+                    displayTime: (settings.displayTime || 5) * 1000
+                };
+            } catch (error) {
                 console.error('Error fetching settings:', error);
-                // Fallback to a default duration if fetching settings fails
-                var defaultDuration = 8000; // 8 seconds
+                return { transitionTime: 5000, displayTime: 5000 };
+            }
+        }
+
+        // Update the initialization
+        async function initializeOffers() {
+            const settings = await fetchSettings();
+            
+            if (!offers || offers.length === 0) {
+                document.getElementById('offerContent').innerHTML = '<p>Keine Angebote verfügbar.</p>';
+            } else {
+                // Initial update
                 updateOffer();
-                setInterval(updateOffer, defaultDuration);
+
+                // Update based on settings
+                setInterval(updateOffer, settings.displayTime + settings.transitionTime);
+
+                // Update transition duration in CSS
+                document.documentElement.style.setProperty('--transition-duration', `${settings.transitionTime/1000}s`);
+            }
+        }
+
+        // Call initialize instead of direct setup
+        initializeOffers();
+
+        // Update the fullscreen functions
+        function enterFullscreen() {
+            document.documentElement.requestFullscreen().then(() => {
+                document.getElementById('enterFullscreenBtn').style.display = 'none';
+                document.getElementById('exitFullscreenBtn').style.display = 'block';
+            }).catch(err => {
+                console.log('Error attempting to enable fullscreen:', err);
             });
+        }
+
+        function exitFullscreen() {
+            document.exitFullscreen().then(() => {
+                document.getElementById('enterFullscreenBtn').style.display = 'block';
+                document.getElementById('exitFullscreenBtn').style.display = 'none';
+            }).catch(err => {
+                console.log('Error attempting to exit fullscreen:', err);
+            });
+        }
+
+        // Update fullscreen change handler
+        document.addEventListener('fullscreenchange', () => {
+            if (document.fullscreenElement) {
+                document.getElementById('enterFullscreenBtn').style.display = 'none';
+                document.getElementById('exitFullscreenBtn').style.display = 'block';
+            } else {
+                document.getElementById('enterFullscreenBtn').style.display = 'block';
+                document.getElementById('exitFullscreenBtn').style.display = 'none';
+            }
+        });
+
+        // Show initial button if URL has #fullscreen
+        if (window.location.hash === '#fullscreen') {
+            document.getElementById('fullscreenPrompt').style.display = 'block';
+            document.getElementById('enterFullscreenBtn').style.display = 'block';
+            document.getElementById('exitFullscreenBtn').style.display = 'none';
+        }
     </script>
 </body>
 </html>

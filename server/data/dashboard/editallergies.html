@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CafDS Dashboard - Allergene bearbeiten</title>
+    <link rel="stylesheet" href="/dashboard/styles.css">
+    <link rel="icon" type="image/x-icon" href="/dashboard/assets/favicon.ico">
+    <script src="/dashboard/js/navbar.js"></script>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <img src="/dashboard/assets/logo.png" alt="CafDS Logo" class="header-logo">
+            <span class="header-title">CafDS Dashboard</span>
+        </div>
+        <div class="header-buttons">
+            <button onclick="saveAllergies()" class="action-btn">Speichern</button>
+            <div class="header-separator"></div>
+            <button id="logoutBtn">Ausloggen</button>
+        </div>
+    </div>
+    <div class="navbar" id="navbar"></div>
+
+    <div class="content">
+        <div class="tables-allergies">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Kürzel</th>
+                        <th>Beschreibung</th>
+                        <th>Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody id="allergiesTable">
+                    <!-- Will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header edit">
+                <h2>Allergen bearbeiten</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="editForm">
+                <input type="hidden" id="editKey">
+                
+                <div class="form-group">
+                    <label for="editDescription">Beschreibung:</label>
+                    <input type="text" id="editDescription" required>
+                </div>
+
+                <div class="form-actions">
+                    <p id="saveMessage" style="display: none;">Änderungen werden gespeichert...</p>
+                    <button type="submit">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="footer">
+        <a href="https://github.com/logilype/cafeteria-digital-signage" style="color: white; text-decoration: none;">
+            © Logilype & Felixmax_ 2025
+        </a>
+    </div>
+
+    <script>
+        const defaultAllergies = {
+            'a': 'glutenhaltige Getreide',
+            'b': 'Milch(-produkte)',
+            'c': 'Eier(-produkte)',
+            'd': 'Soja(-produkte)',
+            'e': 'Erdnüsse',
+            'f': 'Schalenfrüchte',
+            'g': 'Sellerie',
+            'h': 'Senf',
+            'j': 'Krebstiere',
+            'k': 'Fisch',
+            'l': 'Sesam',
+            'm': 'Schwefeldioxid und Sulfite',
+            'n': 'Lupinen',
+            'o': 'Weichtiere'
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeNavbar('allergies');
+            setupModalHandlers();
+            loadAllergies();
+        });
+
+        async function loadAllergies() {
+            try {
+                const response = await fetch('/api/allergies');
+                let allergies = await response.json();
+                
+                // If no allergies are set, use defaults
+                if (Object.keys(allergies).length === 0) {
+                    allergies = defaultAllergies;
+                }
+
+                const tableBody = document.getElementById('allergiesTable');
+                tableBody.innerHTML = Object.entries(allergies).map(([key, description]) => `
+                    <tr>
+                        <td>(${key})</td>
+                        <td>${description}</td>
+                        <td>
+                            <button onclick='openEditModal("${key}", "${description}")'>Bearbeiten</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading allergies:', error);
+                showToast('Fehler beim Laden der Allergene', 'error');
+            }
+        }
+
+        function setupModalHandlers() {
+            const modal = document.getElementById("editModal");
+            const closeBtn = document.querySelector(".close");
+            
+            closeBtn.onclick = () => hideModal(modal);
+            
+            window.onclick = (e) => {
+                if (e.target === modal) hideModal(modal);
+            };
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && modal.style.display === 'block') {
+                    hideModal(modal);
+                }
+            });
+
+            document.getElementById("editForm").addEventListener("submit", handleFormSubmit);
+        }
+
+        function showModal(modal) {
+            modal.style.display = 'block';
+            modal.offsetHeight; // Trigger reflow
+            modal.classList.add('show');
+        }
+
+        function hideModal(modal) {
+            modal.classList.remove('show');
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+        }
+
+        function openEditModal(key, description) {
+            document.getElementById("editKey").value = key;
+            document.getElementById("editDescription").value = description;
+            showModal(document.getElementById("editModal"));
+        }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            const saveMessage = document.getElementById('saveMessage');
+            saveMessage.style.display = 'block';
+
+            const formData = {
+                key: document.getElementById("editKey").value,
+                description: document.getElementById("editDescription").value
+            };
+
+            try {
+                const response = await fetch('/api/editallergy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok) {
+                    hideModal(document.getElementById("editModal"));
+                    showToast('Allergen erfolgreich gespeichert');
+                    loadAllergies();
+                } else {
+                    throw new Error('Failed to save');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Fehler beim Speichern des Allergens.', 'error');
+            } finally {
+                saveMessage.style.display = 'none';
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            
+            const container = document.getElementById('toastContainer');
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => {
+                    container.removeChild(toast);
+                }, 300);
+            }, 3000);
+        }
+
+        document.getElementById("logoutBtn").addEventListener("click", function() {
+            document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            window.location.href = "/ui/login";
+        });
+    </script>
+</body>
+</html> 

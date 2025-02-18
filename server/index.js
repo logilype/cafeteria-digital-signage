@@ -1,56 +1,123 @@
 const express = require('express');
-var XMLHttpRequest = require('xhr2');
+const http = require('http');
+const mongoose = require('mongoose');
+const session = require('express-session');
+const MongoStore = require('connect-mongo');
+const XMLHttpRequest = require('xhr2');
 const fs = require('fs');
 const multer = require('multer');
 const cookieParser = require("cookie-parser");
 const path = require('path');
+const setupWebSocket = require('./websocket');
+const authRoutes = require('./routes/auth');
+const playlistRoutes = require('./routes/playlists');
+
+// MongoDB Connection
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost/cafds').then(() => {
+    console.log('Connected to MongoDB');
+}).catch(err => {
+    console.error('MongoDB connection error:', err);
+});
 
 const app = express();
+const server = http.createServer(app);
 const port = 3000;
-app.use(express.urlencoded({ extended: true }));
+console.log('Initializing server...');
 
-app.use(cookieParser());
+// 1. Essential Middleware
 app.use(express.json());
-app.use(express.static('data'));
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+console.log('Essential middleware initialized');
 
-// Serve static files from the 'public' directory
-app.use(express.static(path.join(__dirname, 'public')));
+// 2. Session Configuration
+console.log('Setting up session...');
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'your-secret-key',
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({
+        mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost/cafds',
+        ttl: 24 * 60 * 60
+    }),
+    cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000
+    }
+}));
+console.log('Session setup complete');
 
-// If your fonts are in a different directory, add another static middleware
-app.use('/media/fonts', express.static(path.join(__dirname, 'data/fonts')));
+// 3. User Middleware
+console.log('Loading user middleware...');
+const { loadUser } = require('./middleware/auth');
+app.use(loadUser);
 
-// Update static file serving middleware
-app.use('/dashboard', express.static(path.join(__dirname, 'data/dashboard')));
-
-// Update font serving middleware
-app.use('/dashboard/fonts', express.static(path.join(__dirname, 'data/dashboard/fonts')));
-
-// Update media serving middleware
+// 4. Static Files (after session setup)
+console.log('Setting up static file serving...');
 app.use('/dashboard/assets', express.static(path.join(__dirname, 'data/dashboard/assets')));
+app.use('/dashboard/fonts', express.static(path.join(__dirname, 'data/dashboard/fonts')));
+app.use('/dashboard', express.static(path.join(__dirname, 'data/dashboard')));
+app.use('/media/fonts', express.static(path.join(__dirname, 'data/fonts')));
+app.use('/media', express.static('media'));
+app.use(express.static('data'));
+console.log('Static paths:', {
+    assets: path.join(__dirname, 'data/dashboard/assets'),
+    dashboard: path.join(__dirname, 'data/dashboard'),
+    media: path.join(__dirname, 'media')
+});
 
-tokenst = [];
+// Add error handling for missing files
+app.use((err, req, res, next) => {
+    console.error('Error serving static file:', req.url);
+    console.error('Error details:', err);
+    next(err);
+});
 
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/playlists', playlistRoutes);
+
+// 5. Routes
+// Authentication pages
+app.get('/ui/login', (req, res) => {
+    console.log('Login page requested');
+    console.log('Session ID:', req.session.userId);
+    console.log('Login file path:', path.join(__dirname, 'data/dashboard/login.html'));
+    if (req.session.userId) {
+        console.log('User already logged in, redirecting to panel');
+        return res.redirect('/panel');
+    }
+    res.sendFile(path.join(__dirname, 'data/dashboard/login.html'));
+});
+
+// Dashboard pages
+app.get('/panel', (req, res) => {
+    if (!req.session.userId) {
+        return res.redirect('/ui/login');
+    }
+    res.sendFile(path.join(__dirname, 'data/dashboard/panel.html'));
+});
+
+app.get('/panel/playlists', (req, res) => {
+    if (!req.session.userId) {
+        return res.redirect('/ui/login');
+    }
+    res.sendFile(path.join(__dirname, 'data/dashboard/playlists.html'));
+});
+
+// Root route
 app.get('/', (req, res) => {
-    // Check if user is logged in by verifying token
-    var token = req.cookies.token;
-    if (checktoken(token)) {
-        // If logged in, redirect to dashboard home
+    if (req.session.userId) {
         res.redirect('/panel');
     } else {
-        // If not logged in, redirect to login page
         res.redirect('/ui/login');
     }
 });
 
-// Set media as static folder
-
-app.use('/media', express.static('media'));
-
 // Endpoint to serve settings page
 app.get('/panel/settings', (req, res) => {
-    var token = req.cookies.token;
-    console.log(token);
-    if (checktoken(token)) {
+    if (req.session.userId) {
         res.sendFile(__dirname + '/data/dashboard/settings.html');
     } else {
         res.redirect('/ui/login');
@@ -64,7 +131,11 @@ app.get('/api/settings', (req, res) => {
             console.error('Error reading settings file:', err);
             return res.status(500).send('Error reading settings');
         }
-        res.json(JSON.parse(data));
+        const settings = JSON.parse(data);
+        // Set defaults if not present
+        if (!settings.transitionTime) settings.transitionTime = 5;
+        if (!settings.displayTime) settings.displayTime = 5;
+        res.json(settings);
     });
 });
 
@@ -83,9 +154,30 @@ app.post('/api/settings', (req, res) => {
 app.get('/getoffers', (req, res) => {
     fs.readFile('data/configs/offers.json', (err, data) => {
         if (err) {
+            console.error('Error reading offers:', err);
             return res.status(500).send(err);
         }
-        res.json(JSON.parse(data));
+        const offers = JSON.parse(data);
+        // Log the offers data for debugging
+        console.log('Sending offers:', offers);
+        const visibleOffers = offers.filter(offer => offer.visibility);
+        
+        if (visibleOffers.length === 0) {
+            return res.send('Keine Angebote verfügbar.');
+        }
+
+        fs.readFile('data/offers.html', 'utf8', (err, template) => {
+            if (err) {
+                return res.status(500).send(err);
+            }
+            // Add debugging info to the client
+            const html = template.replace(
+                'var offers = [];', 
+                `var offers = ${JSON.stringify(visibleOffers, null, 2)};
+                console.log('Loaded offers:', ${JSON.stringify(visibleOffers)});`
+            );
+            res.send(html);
+        });
     });
 });
 
@@ -125,103 +217,79 @@ app.get('/news', (req, res) => {
     
 });
 
-app.get('/panel', (req, res) => {
-    const intent = req.query.intent;
-    var token = req.cookies.token;
-    console.log(token);
-    if (checktoken(token)) {
-        res.sendFile(__dirname + '/data/dashboard/panel.html');
-        if (intent !== undefined) {
-            console.log(intent);
-        }
-    } else {
-        res.redirect('/ui/login');
-    }
-});
 app.get('/panel/upload', (req, res) => {
-    var token = req.cookies.token;
-    console.log(token);
-    if (checktoken(token)) {
-        res.sendFile(__dirname + '/data/dashboard/uploadmedia.html');
-    } else {
-        res.redirect('/ui/login');
+    if (!req.session.userId) {
+        return res.redirect('/ui/login');
     }
+    res.sendFile(__dirname + '/data/dashboard/uploadmedia.html');
 });
     
 app.get('/panel/menu', (req, res) => {
-    var token = req.cookies.token;
-    console.log(token);
-    if (checktoken(token)) {
-        res.sendFile(__dirname + '/data/dashboard/menuedit.html');
-    } else {
-        res.redirect('/ui/login');
+    if (!req.session.userId) {
+        return res.redirect('/ui/login');
     }
+    res.sendFile(__dirname + '/data/dashboard/menuedit.html');
 });
 app.get('/panel/media', (req, res) => {
-    var token = req.cookies.token;
-    console.log(token);
-    if (checktoken(token)) {
-        const mediaDir = path.join(__dirname, 'media');
-        
-        fs.readdir(mediaDir, (err, files) => {
+    if (!req.session.userId) {
+        return res.redirect('/ui/login');
+    }
+    const mediaDir = path.join(__dirname, 'media');
+    
+    fs.readdir(mediaDir, (err, files) => {
+        if (err) {
+            console.error('Error reading media directory:', err);
+            return res.status(500).send('Error loading media');
+        }
+
+        const imageEntries = files.map(file => `
+            <tr>
+                <td>${file}</td>
+                <td><img src="/media/${file}" alt="${file}" style="width: 100px;"></td>
+                <td><button onclick="deleteImage('${file}')">Löschen</button></td>
+            </tr>
+        `).join('');
+
+        fs.readFile(path.join(__dirname, 'data/dashboard', 'media.html'), 'utf8', (err, html) => {
             if (err) {
-                console.error('Error reading media directory:', err);
-                return res.status(500).send('Error loading media');
+                console.error('Error reading media.html:', err);
+                return res.status(500).send('Error loading page');
             }
 
-            const imageEntries = files.map(file => `
-                <tr>
-                    <td>${file}</td>
-                    <td><img src="/media/${file}" alt="${file}" style="width: 100px;"></td>
-                    <td><button onclick="deleteImage('${file}')">Löschen</button></td>
-                </tr>
-            `).join('');
-
-            fs.readFile(path.join(__dirname, 'data/dashboard', 'media.html'), 'utf8', (err, html) => {
-                if (err) {
-                    console.error('Error reading media.html:', err);
-                    return res.status(500).send('Error loading page');
-                }
-
-                const updatedHtml = html.replace('(renderanchor)', imageEntries);
-                res.send(updatedHtml);
-            });
+            const updatedHtml = html.replace('(renderanchor)', imageEntries);
+            res.send(updatedHtml);
         });
-    } else {
-        res.redirect('/ui/login');
-    }
+    });
 });
 
 app.get('/panel/offers', (req, res) => {
-    var token = req.cookies.token;
-    if (checktoken(token)) {
-        fs.readFile('data/configs/offers.json', (err, data) => {
-            if (err) {
-                return res.status(500).send(err);
-            }
-            const menu = JSON.parse(data);
-            const entries = menu.map(item => `
-                <div class="grid-item">
-                    <p class="item-name">${item.name}</p>
-                    <p class="item-price">${item.price.toFixed(2).replace('.', ',')}&nbsp;€</p>
-                    <div class="image-container">
-                        <img src="${item.image}" alt="${item.name}">
-                    </div>
-                    <p class="item-days">${item.days}</p>
-                    <p class="item-visibility ${item.visibility ? '' : 'inactive'}">${item.visibility ? 'Wird angezeigt' : 'Wird nicht angezeigt'}</p>
-                    <div class="buttons">
-                        <button type="button" onclick="openEditModal({ id: '${item.id}', name: '${item.name}', price: '${item.price}', image: '${item.image}', days: '${item.days}', visibility: ${item.visibility} })">Bearbeiten</button>
-                        <button onclick="deleteEntry(${item.id})">Löschen</button>
-                    </div>
-                </div>
-            `).join('');
-            
-            const html = fs.readFileSync('data/dashboard/offersedit.html', 'utf8').replace('(renderanchor)', entries);
-            res.send(html);
-        });
-    } else {
-        res.redirect('/ui/login');
+    if (!req.session.userId) {
+        return res.redirect('/ui/login');
     }
+    fs.readFile('data/configs/offers.json', (err, data) => {
+        if (err) {
+            return res.status(500).send(err);
+        }
+        const menu = JSON.parse(data);
+        const entries = menu.map(item => `
+            <div class="grid-item">
+                <p class="item-name">${item.name}</p>
+                <p class="item-price">${item.price.toFixed(2).replace('.', ',')}&nbsp;€</p>
+                <div class="image-container">
+                    <img src="${item.image}" alt="${item.name}">
+                </div>
+                <p class="item-days">${item.days}</p>
+                <p class="item-visibility ${item.visibility ? '' : 'inactive'}">${item.visibility ? 'Wird angezeigt' : 'Wird nicht angezeigt'}</p>
+                <div class="buttons">
+                    <button type="button" onclick="openEditModal({ id: '${item.id}', name: '${item.name}', price: '${item.price}', image: '${item.image}', days: '${item.days}', visibility: ${item.visibility} })">Bearbeiten</button>
+                    <button onclick="deleteEntry(${item.id})">Löschen</button>
+                </div>
+            </div>
+        `).join('');
+        
+        const html = fs.readFileSync('data/dashboard/offersedit.html', 'utf8').replace('(renderanchor)', entries);
+        res.send(html);
+    });
 });
 
 const storage = multer.diskStorage({
@@ -251,29 +319,26 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
 
 
 app.get('/panel/offers/new', (req, res) => {
-    var token = req.cookies.token;
-    console.log(token);
-    if (checktoken(token)) {
-        fs.readFile('data/dashboard/newofferentry.html', (err, data) => {
+    if (!req.session.userId) {
+        return res.redirect('/ui/login');
+    }
+    fs.readFile('data/dashboard/newofferentry.html', (err, data) => {
+        if (err) {
+            res.send(err);
+        };
+        //index all files in media folder and add them to the dropdown
+        fs.readdir('media', (err, files) => {
             if (err) {
                 res.send(err);
             };
-            //index all files in media folder and add them to the dropdown
-            fs.readdir('media', (err, files) => {
-                if (err) {
-                    res.send(err);
-                };
-                var dropdown = "";
-                for (var i = 0; i < files.length; i++) {
-                    dropdown = dropdown + "<option value='" + files[i] + "'>" + files[i] + "</option>";
-                }
-                replacementdata = data.toString().replace("(allimgs)", dropdown);
-                res.send(replacementdata);
-            });
+            var dropdown = "";
+            for (var i = 0; i < files.length; i++) {
+                dropdown = dropdown + "<option value='" + files[i] + "'>" + files[i] + "</option>";
+            }
+            replacementdata = data.toString().replace("(allimgs)", dropdown);
+            res.send(replacementdata);
         });
-    } else {
-        res.redirect('/ui/login');
-    }
+    });
 });
 
 app.post('/api/newentry', (req, res) => {
@@ -347,66 +412,6 @@ app.post('/api/editentry', (req, res) => {
     });
 });
 
-app.post('/api/login', (req, res) => {
-    // get username and pw from form data
-    var username = req.body.username;
-    var password = req.body.password;
-    //check if username and pw are correct
-    //read accounts.json
-    fs.readFile('data/configs/accounts.json', (err, data) => {
-        if (err) {
-            res.send(err);
-        };
-        //parse json
-        var accounts = JSON.parse(data);
-        //check if username and pw are correct
-        for (var i = 0; i < accounts.length; i++) {
-            if (accounts[i].username == username && accounts[i].password == password) {
-                //if correct make a token and send it to the user
-                var token = maketoken();
-                res.send(token);
-                return;
-            }
-        }
-        //if not correct send error
-        res.sendStatus(401);
-    });
-});
-app.get("/ui/login", (req, res) => {
-    res.sendFile(__dirname + '/data/dashboard/login.html');
-});
-
-function maketoken() {
-    var token = "";
-    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    for (var i = 0; i < 32; i++)
-        token += possible.charAt(Math.floor(Math.random() * possible.length));
-
-    tokenst.push(token);
-    return token;
-}
-
-function checktoken(token) {
-    for (var i = 0; i < tokenst.length; i++) {
-        if (tokenst[i] == token) {
-            return true;
-        }
-    }
-    return false;
-}
-
-function makeresultid(length) {
-    let result = '';
-    const characters = '0123456789';
-    const charactersLength = characters.length;
-    let counter = 0;
-    while (counter < length) {
-        result += characters.charAt(Math.floor(Math.random() * charactersLength));
-        counter += 1;
-    }
-    return result
-}
-
 app.post('/api/deleteoffer', (req, res) => {
     const id = req.body.id;
     console.log('Request body:', req.body);
@@ -459,32 +464,25 @@ app.post('/api/deleteimage', (req, res) => {
 });
 
 app.get('/panel/menuentries', (req, res) => {
-    var token = req.cookies.token;
-    console.log(token);
-    if (checktoken(token)) {
-        res.sendFile(path.join(__dirname, 'data/dashboard', 'menuentries.html'));
-    } else {
-        res.redirect('/ui/login');
+    if (!req.session.userId) {
+        return res.redirect('/ui/login');
     }
+    res.sendFile(path.join(__dirname, 'data/dashboard', 'menuentries.html'));
 });
 
 app.get('/api/menuentries', (req, res) => {
-    var token = req.cookies.token;
-    console.log(token);
-    if (checktoken(token)) {
-        // If valid, read the menuentries.json file
-        fs.readFile('data/configs/menuentries.json', 'utf8', (err, data) => {
-            if (err) {
-                console.error('Error reading menuentries.json:', err);
-                return res.status(500).send('Error reading menu entries');
-            }
-            // Send the parsed JSON data as a response
-            res.json(JSON.parse(data));
-        });
-    } else {
-        // If not valid, redirect to login page
-        res.redirect('/ui/login');
+    if (!req.session.userId) {
+        return res.redirect('/ui/login');
     }
+    // If valid, read the menuentries.json file
+    fs.readFile('data/configs/menuentries.json', 'utf8', (err, data) => {
+        if (err) {
+            console.error('Error reading menuentries.json:', err);
+            return res.status(500).send('Error reading menu entries');
+        }
+        // Send the parsed JSON data as a response
+        res.json(JSON.parse(data));
+    });
 });
 
 app.post('/api/editmenuentry', (req, res) => {
@@ -537,7 +535,19 @@ app.post('/api/newmenuentry', (req, res) => {
     });
 });
 
-app.listen(port, () => console.log(`Server listening on port ${port}!`));
+// Setup WebSocket
+const ws = setupWebSocket(server);
+app.set('ws', ws); // Make WebSocket available to routes
+
+server.listen(port, () => {
+    console.log(`
+    Server initialized:
+    - Port: ${port}
+    - Environment: ${process.env.NODE_ENV || 'development'}
+    - MongoDB URL: ${process.env.MONGODB_URI || 'mongodb://localhost/cafds'}
+    - Static files root: ${path.join(__dirname, 'data')}
+    `);
+});
 
 app.post('/api/deletemenuentry', (req, res) => {
     const id = req.body.id;
@@ -571,13 +581,10 @@ app.post('/api/deletemenuentry', (req, res) => {
 });
 
 app.get('/panel/menuentries/new', (req, res) => {
-    var token = req.cookies.token;
-    console.log(token);
-    if (checktoken(token)) {
-        res.sendFile(path.join(__dirname, 'data/dashboard', 'newmenuentry.html'));
-    } else {
-        res.redirect('/ui/login');
+    if (!req.session.userId) {
+        return res.redirect('/ui/login');
     }
+    res.sendFile(path.join(__dirname, 'data/dashboard', 'newmenuentry.html'));
 });
 
 app.get('/api/cafeteriaMenuEntries', (req, res) => {
@@ -654,13 +661,14 @@ app.get('/api/offers', (req, res) => {
 // Add or update these endpoints
 
 // Get offers
-app.get('/api/offers', (req, res) => {
+app.get('/api/getoffers', (req, res) => {
     fs.readFile('data/configs/offers.json', (err, data) => {
         if (err) {
-            console.error('Error reading offers.json:', err);
-            return res.status(500).send('Error reading offers');
+            return res.status(500).send(err);
         }
-        res.json(JSON.parse(data));
+        const offers = JSON.parse(data);
+        const visibleOffers = offers.filter(offer => offer.visibility);
+        res.json(visibleOffers);
     });
 });
 
@@ -819,12 +827,10 @@ app.post('/api/advertisement', (req, res) => {
 });
 
 app.get('/panel/advertising', (req, res) => {
-    var token = req.cookies.token;
-    if (checktoken(token)) {
-        res.sendFile(__dirname + '/data/dashboard/advertising.html');
-    } else {
-        res.redirect('/ui/login');
+    if (!req.session.userId) {
+        return res.redirect('/ui/login');
     }
+    res.sendFile(__dirname + '/data/dashboard/advertising.html');
 });
 
 // Also add an endpoint to get list of media files for the dropdown
@@ -861,8 +867,7 @@ app.get('/api/advertisements', (req, res) => {
 
 // Delete advertisement
 app.post('/api/advertisement/delete', (req, res) => {
-    var token = req.cookies.token;
-    if (!checktoken(token)) {
+    if (!req.session.userId) {
         return res.redirect('/ui/login');
     }
 
@@ -889,10 +894,76 @@ app.post('/api/advertisement/delete', (req, res) => {
 
 // Add route for new advertisement page
 app.get('/panel/advertising/new', (req, res) => {
-    var token = req.cookies.token;
-    if (checktoken(token)) {
-        res.sendFile(__dirname + '/data/dashboard/newadvertisement.html');
+    if (!req.session.userId) {
+        return res.redirect('/ui/login');
+    }
+    res.sendFile(__dirname + '/data/dashboard/newadvertisement.html');
+});
+
+// Add route for public offers display
+app.get('/offers', (req, res) => {
+    res.sendFile(path.join(__dirname, 'data/offers.html'));
+});
+
+// Add API route for getting offers data
+app.get('/api/getoffers', (req, res) => {
+    fs.readFile('data/configs/offers.json', (err, data) => {
+        if (err) {
+            return res.status(500).send(err);
+        }
+        res.json(JSON.parse(data));
+    });
+});
+
+// Add or update media serving middleware
+app.use('/media', express.static('media'));
+
+// Also ensure images can be accessed from the dashboard
+app.use('/dashboard/assets', express.static(path.join(__dirname, 'data/dashboard/assets')));
+
+// Add these routes for navbar
+app.get('/dashboard/js/navbar.js', (req, res) => {
+    res.sendFile(path.join(__dirname, 'data/dashboard/js/navbar.js'));
+});
+
+app.get('/dashboard/config/navbar.json', (req, res) => {
+    res.sendFile(path.join(__dirname, 'data/dashboard/config/navbar.json'));
+});
+
+// Authentication middleware
+function checkAuth(req, res, next) {
+    if (req.session.userId) {
+        next();
     } else {
         res.redirect('/ui/login');
     }
+}
+
+// Add allergies routes
+app.get('/panel/allergies', checkAuth, (req, res) => {
+    res.sendFile(path.join(__dirname, 'data/dashboard/editallergies.html'));
+});
+
+app.get('/api/allergies', checkAuth, (req, res) => {
+    const allergiesPath = path.join(__dirname, 'data/allergies.json');
+    if (fs.existsSync(allergiesPath)) {
+        res.json(JSON.parse(fs.readFileSync(allergiesPath)));
+    } else {
+        res.json({}); // Return empty object if no allergies set
+    }
+});
+
+app.post('/api/editallergy', checkAuth, (req, res) => {
+    const allergiesPath = path.join(__dirname, 'data/allergies.json');
+    let allergies = {};
+    
+    if (fs.existsSync(allergiesPath)) {
+        allergies = JSON.parse(fs.readFileSync(allergiesPath));
+    }
+    
+    const { key, description } = req.body;
+    allergies[key] = description;
+    
+    fs.writeFileSync(allergiesPath, JSON.stringify(allergies, null, 4));
+    res.sendStatus(200);
 });

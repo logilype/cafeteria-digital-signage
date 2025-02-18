@@ -6,6 +6,7 @@
     <title>CafDS Dashboard - Angebote bearbeiten</title>
     <link rel="stylesheet" href="/dashboard/styles.css">
     <link rel="icon" type="image/x-icon" href="/dashboard/assets/favicon.ico">
+    <script src="/dashboard/js/navbar.js"></script>
 </head>
 <body>
     <div class="header">
@@ -13,47 +14,28 @@
             <img src="/dashboard/assets/logo.png" alt="CafDS Logo" class="header-logo">
             <span class="header-title">CafDS Dashboard</span>
         </div>
-        <button id="logoutBtn">Ausloggen</button>
-    </div>
-    <div class="navbar" id="navbar">
-        <div class="navbar-item">
-            <a href="/panel">Home</a>
-        </div>
-        <div class="navbar-item-selected">
-            <a href="/panel/offers">Angebote bearbeiten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/menu">Speiseplan verwalten/bearbeiten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/menuentries">Speiseplaneinträge verwalten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/advertising">Werbung bearbeiten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/media">Medien verwalten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/settings">Einstellungen</a>
+        <div class="header-buttons">
+            <button id="newbtn" class="action-btn" onclick="openCreateModal()">Hinzufügen</button>
+            <button onclick="fetchOffers()" class="action-btn">Aktualisieren</button>
+            <div class="header-separator"></div>
+            <button id="previewBtn" class="preview-btn">Vorschau</button>
+            <div class="header-separator"></div>
+            <button id="logoutBtn">Ausloggen</button>
         </div>
     </div>
+    <div class="navbar" id="navbar"></div>
     <div class="content">
         <div class="tables">
             <div class="grid-container">
                 (renderanchor) <!-- This will be replaced with the actual entries -->
             </div>
         </div>
-        <div class="actionbuttons">
-            <input type="button" value="Hinzufügen" id="newbtn">
-            <input type="button" value="Aktualisieren" onclick="fetchOffers()">
-        </div>
         
         <!-- Add Edit Modal -->
         <div id="editModal" class="modal">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h2>Eintrag bearbeiten</h2>
+                <div class="modal-header edit">
+                    <h2>Angebot bearbeiten</h2>
                     <span class="close">&times;</span>
                 </div>
                 <form id="editForm">
@@ -77,10 +59,10 @@
                     <div class="form-group">
                         <label>Bild:</label>
                         <div class="selected-image">
-                            <img id="previewImage" src="" alt="">
+                            <img id="editPreviewImage" src="" alt="">
                         </div>
-                        <button type="button" class="image-select-btn" onclick="toggleDropdown()">Bild auswählen</button>
-                        <div id="imageDropdownList" class="dropdown-list" style="display: none;"></div>
+                        <button type="button" class="image-select-btn" onclick="toggleDropdown('edit')">Bild auswählen</button>
+                        <div id="editImageDropdownList" class="dropdown-list" style="display: none;"></div>
                         <input type="hidden" id="editImage" name="image">
                     </div>
                     
@@ -104,6 +86,63 @@
                 </form>
             </div>
         </div>
+
+        <!-- Add Create Modal -->
+        <div id="createModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header create">
+                    <h2>Neues Angebot</h2>
+                    <span class="close">&times;</span>
+                </div>
+                <form id="createForm">
+                    <div class="form-group">
+                        <label for="createName">Name:</label>
+                        <input type="text" id="createName" name="name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="createPrice">Preis:</label>
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <input type="number" id="createEuro" name="euro" min="0" max="9" style="width: 60px;" required>
+                            <span>,</span>
+                            <input type="number" id="createCent" name="cent" min="0" max="99" style="width: 60px;" required>
+                            <span>&nbsp;€</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Bild:</label>
+                        <div class="selected-image">
+                            <img id="createPreviewImage" src="" alt="">
+                        </div>
+                        <button type="button" class="image-select-btn" onclick="toggleDropdown('create')">Bild auswählen</button>
+                        <div id="createImageDropdownList" class="dropdown-list" style="display: none;"></div>
+                        <input type="hidden" id="createImage" name="image">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="createDays">Tage:</label>
+                        <input type="text" id="createDays" name="days" required>
+                    </div>
+                    
+                    <div class="form-group toggle-group">
+                        <span class="toggleVisibilityTxt">Wird nicht angezeigt</span>
+                        <label class="toggle">
+                            <input type="checkbox" id="toggleVisibilityBtn">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+
+                    <div class="form-actions">
+                        <p id="saveMessage" style="display: none;">Angebot erfolgreich gespeichert</p>
+                        <button type="submit">Speichern</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Add toast container -->
+        <div class="toast-container" id="toastContainer"></div>
     </div>
 
     <!-- Add toast container -->
@@ -115,11 +154,79 @@
         </a>
     </div>
 
+    <style>
+    .header-buttons {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .header-separator {
+        width: 2px;
+        height: 24px;
+        background-color: var(--color-surface-a30);
+        margin: 0 5px;
+    }
+
+    .action-btn {
+        background-color: var(--color-surface-a20);
+    }
+
+    .action-btn:hover {
+        background-color: var(--color-surface-a30);
+    }
+
+    .preview-btn {
+        background-color: var(--color-primary-a10);
+    }
+
+    .preview-btn:hover {
+        background-color: var(--color-primary-a20);
+    }
+    </style>
+
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeNavbar('offers');
             setupModalHandlers();
             fetchOffers();
         });
+
+        // Add debounce function
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Create debounced version of fetchOffers
+        const debouncedFetch = debounce(fetchOffers, 250);
+
+        // Add cache
+        const cache = new Map();
+
+        async function fetchOffersWithCache() {
+            const cacheKey = 'offers';
+            const cachedData = cache.get(cacheKey);
+            
+            if (cachedData && Date.now() - cachedData.timestamp < 30000) { // 30 seconds cache
+                return cachedData.data;
+            }
+            
+            const response = await fetch('/api/getadminoffers');
+            const data = await response.json();
+            cache.set(cacheKey, {
+                data,
+                timestamp: Date.now()
+            });
+            return data;
+        }
 
         // Toast notification function
         function showToast(message, type = 'success') {
@@ -157,18 +264,29 @@
         }
 
         function setupModalHandlers() {
-            const modal = document.getElementById("editModal");
-            const closeBtn = document.querySelector(".close");
+            const editModal = document.getElementById("editModal");
+            const createModal = document.getElementById("createModal");
+            const closeBtns = document.querySelectorAll(".close");
             
-            closeBtn.onclick = () => hideModal(modal);
+            // Handle all close buttons
+            closeBtns.forEach(btn => {
+                btn.onclick = () => {
+                    hideModal(editModal);
+                    hideModal(createModal);
+                };
+            });
+
+            // Close on outside click
             window.onclick = (e) => {
-                if (e.target === modal) hideModal(modal);
+                if (e.target === editModal) hideModal(editModal);
+                if (e.target === createModal) hideModal(createModal);
             };
 
             // Add escape key handler
             document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && modal.style.display === 'block') {
-                    hideModal(modal);
+                if (e.key === 'Escape') {
+                    hideModal(editModal);
+                    hideModal(createModal);
                 }
             });
 
@@ -191,7 +309,7 @@
             document.getElementById("editCent").value = cents.toString().padStart(2, '0');
             
             document.getElementById("editImage").value = item.image;
-            document.getElementById("previewImage").src = item.image;
+            document.getElementById("editPreviewImage").src = item.image;
             document.getElementById("editDays").value = item.days;
             document.getElementById("toggleVisibilityBtn").checked = item.visibility;
             
@@ -230,9 +348,20 @@
                 });
 
                 if (response.ok) {
+                    // Update the specific grid item without refreshing the page
+                    const gridItem = document.querySelector(`[data-offer-id="${formData.id}"]`);
+                    if (gridItem) {
+                        const img = gridItem.querySelector('img');
+                        img.src = formData.image;
+                        gridItem.querySelector('.item-name').textContent = formData.name;
+                        gridItem.querySelector('.item-price').textContent = `${formData.price.toFixed(2).replace('.', ',')} €`;
+                        gridItem.querySelector('.item-days').textContent = `Tage: ${formData.days}`;
+                        gridItem.querySelector('.item-visibility').textContent = formData.visibility ? 'Wird angezeigt' : 'Wird nicht angezeigt';
+                        gridItem.querySelector('.item-visibility').classList.toggle('inactive', !formData.visibility);
+                    }
+                    
                     hideModal(document.getElementById("editModal"));
                     showToast('Angebot erfolgreich gespeichert');
-                    fetchOffers();
                 } else {
                     throw new Error('Failed to save');
                 }
@@ -240,7 +369,7 @@
                 console.error('Error:', error);
                 showToast('Fehler beim Speichern des Angebots.', 'error');
             } finally {
-                saveMessage.style.display = 'none'; // Hide message regardless of outcome
+                saveMessage.style.display = 'none';
             }
         }
 
@@ -256,7 +385,7 @@
                 
                 if (response.ok) {
                     showToast('Angebot erfolgreich gelöscht');
-                    fetchOffers();
+                    debouncedFetch(); // Use debounced version here
                 } else {
                     throw new Error('Failed to delete');
                 }
@@ -267,14 +396,14 @@
         }
 
         // Add image dropdown functionality
-        function toggleDropdown() {
-            const dropdownList = document.getElementById("imageDropdownList");
+        function toggleDropdown(modalType) {
+            const dropdownList = document.getElementById(modalType === 'create' ? "createImageDropdownList" : "editImageDropdownList");
             if (dropdownList.style.display === "none") {
                 fetch('/api/getImages')
                     .then(response => response.json())
                     .then(images => {
                         dropdownList.innerHTML = images.map(image => `
-                            <div onclick="selectImage('${image}')">
+                            <div onclick="selectImage('${image}', '${modalType}')">
                                 <img src="${image}" alt="${image.split('/').pop()}">
                             </div>
                         `).join('');
@@ -286,33 +415,53 @@
             }
         }
 
-        function selectImage(image) {
-            document.getElementById("previewImage").src = image;
-            document.getElementById("editImage").value = image;
-            document.getElementById("imageDropdownList").style.display = "none";
+        function selectImage(image, modalType) {
+            const prefix = modalType === 'create' ? 'create' : 'edit';
+            document.getElementById(`${prefix}Image`).value = image;
+            document.getElementById(`${prefix}PreviewImage`).src = image;
+            document.getElementById(`${prefix}ImageDropdownList`).style.display = "none";
         }
 
-        document.getElementById("newbtn").addEventListener("click", function() {
-            window.location.href = "/panel/offers/new";
-        });
+        function openCreateModal() {
+            // Clear form fields
+            document.getElementById("createName").value = "";
+            document.getElementById("createEuro").value = "0";
+            document.getElementById("createCent").value = "00";
+            document.getElementById("createImage").value = "";
+            document.getElementById("createDays").value = "";
+            document.getElementById("toggleVisibilityBtn").checked = false;
+            
+            // Show the create modal
+            showModal(document.getElementById("createModal"));
+        }
 
         document.getElementById("logoutBtn").addEventListener("click", function() {
             document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
             window.location.href = "/ui/login";
         });
 
+        document.getElementById("previewBtn").addEventListener("click", function() {
+            // Open offers page with fullscreen hash
+            window.open('/getoffers#fullscreen', '_blank');
+        });
+
         async function fetchOffers() {
             try {
-                const response = await fetch('/api/getadminoffers');
-                const offers = await response.json();
+                const offers = await fetchOffersWithCache();
                 
-                const gridContainer = document.querySelector('.grid-container');
-                gridContainer.innerHTML = offers.map(item => `
-                    <article class="grid-item">
+                const fragment = document.createDocumentFragment();
+                const gridContainer = document.createElement('div');
+                gridContainer.className = 'grid-container';
+                
+                offers.forEach(item => {
+                    const article = document.createElement('article');
+                    article.className = 'grid-item';
+                    article.setAttribute('data-offer-id', item.id);
+                    article.innerHTML = `
                         <div class="grid-item-content">
                             <header>
                                 <div class="image-container">
-                                    <img src="${item.image}" alt="${item.name}">
+                                    <img src="${item.image}" alt="${item.name}" loading="lazy">
                                 </div>
                                 <h3 class="item-name">${item.name}</h3>
                             </header>
@@ -328,13 +477,63 @@
                                 <button onclick="deleteEntry('${item.id}')">Löschen</button>
                             </footer>
                         </div>
-                    </article>
-                `).join('');
+                    `;
+                    gridContainer.appendChild(article);
+                });
+                
+                fragment.appendChild(gridContainer);
+                
+                const container = document.querySelector('.tables');
+                const oldGrid = container.querySelector('.grid-container');
+                if (oldGrid) {
+                    container.removeChild(oldGrid);
+                }
+                container.appendChild(fragment);
             } catch (error) {
                 console.error('Error fetching offers:', error);
                 showToast('Fehler beim Laden der Angebote', 'error');
             }
         }
+
+        // Add create form submit handler
+        document.getElementById("createForm").addEventListener("submit", async function(e) {
+            e.preventDefault();
+            const saveMessage = document.getElementById('saveMessage');
+            saveMessage.style.display = 'block';
+
+            const euros = parseInt(document.getElementById("createEuro").value) || 0;
+            const cents = parseInt(document.getElementById("createCent").value) || 0;
+            const price = euros + cents / 100;
+
+            const formData = {
+                name: document.getElementById("createName").value,
+                price: price,
+                image: document.getElementById("createImage").value,
+                days: document.getElementById("createDays").value,
+                visibility: document.getElementById("toggleVisibilityBtn").checked
+            };
+
+            try {
+                const response = await fetch('/api/newentry', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok) {
+                    hideModal(document.getElementById("createModal"));
+                    showToast('Angebot erfolgreich erstellt');
+                    fetchOffers(); // Refresh the grid
+                } else {
+                    throw new Error('Failed to create');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Fehler beim Erstellen des Angebots.', 'error');
+            } finally {
+                saveMessage.style.display = 'none';
+            }
+        });
     </script>
 </body>
 </html>

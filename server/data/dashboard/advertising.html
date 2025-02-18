@@ -2,10 +2,11 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CafDS Dashboard - Werbung bearbeiten</title>
     <link rel="stylesheet" href="/dashboard/styles.css">
     <link rel="icon" type="image/x-icon" href="/dashboard/assets/favicon.ico">
+    <script src="/dashboard/js/navbar.js"></script>
 </head>
 <body>
     <div class="header">
@@ -13,31 +14,14 @@
             <img src="/dashboard/assets/logo.png" alt="CafDS Logo" class="header-logo">
             <span class="header-title">CafDS Dashboard</span>
         </div>
-        <button id="logoutBtn">Ausloggen</button>
-    </div>
-    <div class="navbar">
-        <div class="navbar-item">
-            <a href="/panel">Home</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/offers">Angebote bearbeiten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/menu">Speiseplan verwalten/bearbeiten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/menuentries">Speiseplaneinträge verwalten</a>
-        </div>
-        <div class="navbar-item-selected">
-            <a href="/panel/advertising">Werbung bearbeiten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/media">Medien verwalten</a>
-        </div>
-        <div class="navbar-item">
-            <a href="/panel/settings">Einstellungen</a>
+        <div class="header-buttons">
+            <button onclick="openCreateModal()" class="action-btn">Neue Werbung</button>
+            <button onclick="fetchAds()" class="action-btn">Aktualisieren</button>
+            <div class="header-separator"></div>
+            <button id="logoutBtn">Ausloggen</button>
         </div>
     </div>
+    <div class="navbar" id="navbar"></div>
 
     <div class="content">
         <div class="tables">
@@ -46,15 +30,10 @@
             </div>
         </div>
         
-        <div class="actionbuttons">
-            <input type="button" value="Neue Werbung hinzufügen" onclick="window.location.href='/panel/advertising/new'">
-            <input type="button" value="Aktualisieren" onclick="fetchAds()">
-        </div>
-
         <!-- Edit Modal -->
         <div id="editModal" class="modal">
             <div class="modal-content">
-                <div class="modal-header">
+                <div class="modal-header edit">
                     <h2>Werbung bearbeiten</h2>
                     <span class="close">&times;</span>
                 </div>
@@ -69,16 +48,60 @@
                     <div class="form-group">
                         <label>Bild:</label>
                         <div class="selected-image">
-                            <img id="previewImage" src="" alt="">
+                            <img id="editPreviewImage" src="" alt="">
                         </div>
-                        <button type="button" class="image-select-btn" onclick="toggleDropdown()">Bild auswählen</button>
-                        <div id="imageDropdownList" class="dropdown-list" style="display: none;"></div>
+                        <button type="button" class="image-select-btn" onclick="toggleDropdown('edit')">Bild auswählen</button>
+                        <div id="editImageDropdownList" class="dropdown-list" style="display: none;"></div>
                         <input type="hidden" id="editImage">
                     </div>
                     
                     <div class="form-group">
                         <label for="editDescription">Beschreibung:</label>
                         <textarea id="editDescription" required></textarea>
+                    </div>
+                    
+                    <div class="form-group toggle-group">
+                        <span class="toggleVisibilityTxt">Wird nicht angezeigt</span>
+                        <label class="toggle">
+                            <input type="checkbox" id="toggleVisibilityBtn">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+
+                    <div class="form-actions">
+                        <p id="saveMessage" style="display: none;">Änderungen werden gespeichert...</p>
+                        <button type="submit">Speichern</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Create Modal -->
+        <div id="createModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header create">
+                    <h2>Neue Werbung</h2>
+                    <span class="close">&times;</span>
+                </div>
+                <form id="createForm">
+                    <div class="form-group">
+                        <label for="createHeader">Überschrift:</label>
+                        <input type="text" id="createHeader" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Bild:</label>
+                        <div class="selected-image">
+                            <img id="createPreviewImage" src="" alt="">
+                        </div>
+                        <button type="button" class="image-select-btn" onclick="toggleDropdown('create')">Bild auswählen</button>
+                        <div id="createImageDropdownList" class="dropdown-list" style="display: none;"></div>
+                        <input type="hidden" id="createImage">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="createDescription">Beschreibung:</label>
+                        <textarea id="createDescription" required></textarea>
                     </div>
                     
                     <div class="form-group toggle-group">
@@ -109,6 +132,7 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
+            initializeNavbar('advertising');
             fetchAds();
             setupModalHandlers();
         });
@@ -241,7 +265,7 @@
             document.getElementById("editHeader").value = ad.header;
             document.getElementById("editDescription").value = ad.description;
             document.getElementById("editImage").value = ad.image;
-            document.getElementById("previewImage").src = ad.image;
+            document.getElementById("editPreviewImage").src = ad.image;
             document.getElementById("toggleVisibilityBtn").checked = ad.enabled;
             document.querySelector(".toggleVisibilityTxt").textContent = 
                 ad.enabled ? "Wird angezeigt" : "Wird nicht angezeigt";
@@ -250,18 +274,29 @@
         }
 
         function setupModalHandlers() {
-            const modal = document.getElementById("editModal");
-            const closeBtn = document.querySelector(".close");
+            const editModal = document.getElementById("editModal");
+            const createModal = document.getElementById("createModal");
+            const closeBtns = document.querySelectorAll(".close");
             
-            closeBtn.onclick = () => hideModal(modal);
+            // Handle all close buttons
+            closeBtns.forEach(btn => {
+                btn.onclick = () => {
+                    hideModal(editModal);
+                    hideModal(createModal);
+                };
+            });
+
+            // Close on outside click
             window.onclick = (e) => {
-                if (e.target === modal) hideModal(modal);
+                if (e.target === editModal) hideModal(editModal);
+                if (e.target === createModal) hideModal(createModal);
             };
 
             // Add escape key handler
             document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && modal.style.display === 'block') {
-                    hideModal(modal);
+                if (e.key === 'Escape') {
+                    hideModal(editModal);
+                    hideModal(createModal);
                 }
             });
 
@@ -273,9 +308,81 @@
             document.getElementById("editForm").addEventListener("submit", handleFormSubmit);
         }
 
+        function toggleDropdown(modalType) {
+            const dropdownList = document.getElementById(modalType === 'create' ? "createImageDropdownList" : "editImageDropdownList");
+            if (dropdownList.style.display === "none") {
+                fetch('/api/getImages')
+                    .then(response => response.json())
+                    .then(images => {
+                        dropdownList.innerHTML = images.map(image => `
+                            <div onclick="selectImage('${image}', '${modalType}')">
+                                <img src="${image}" alt="${image.split('/').pop()}">
+                            </div>
+                        `).join('');
+                        dropdownList.style.display = "block";
+                    })
+                    .catch(error => console.error('Error loading images:', error));
+            } else {
+                dropdownList.style.display = "none";
+            }
+        }
+
+        function selectImage(image, modalType) {
+            const prefix = modalType === 'create' ? 'create' : 'edit';
+            document.getElementById(`${prefix}Image`).value = image;
+            document.getElementById(`${prefix}PreviewImage`).src = image;
+            document.getElementById(`${prefix}ImageDropdownList`).style.display = "none";
+        }
+
         document.getElementById("logoutBtn").addEventListener("click", function() {
             document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
             window.location.href = "/ui/login";
+        });
+
+        function openCreateModal() {
+            // Clear form fields
+            document.getElementById("createHeader").value = "";
+            document.getElementById("createImage").value = "";
+            document.getElementById("createDescription").value = "";
+            document.getElementById("toggleVisibilityBtn").checked = false;
+            
+            // Show the create modal
+            showModal(document.getElementById("createModal"));
+        }
+
+        // Add create form submit handler
+        document.getElementById("createForm").addEventListener("submit", async function(e) {
+            e.preventDefault();
+            const saveMessage = document.getElementById('saveMessage');
+            saveMessage.style.display = 'block';
+
+            const formData = {
+                header: document.getElementById("createHeader").value,
+                image: document.getElementById("createImage").value,
+                description: document.getElementById("createDescription").value,
+                enabled: document.getElementById("toggleVisibilityBtn").checked
+            };
+
+            try {
+                const response = await fetch('/api/advertisement', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok) {
+                    hideModal(document.getElementById("createModal"));
+                    showToast('Werbung erfolgreich erstellt');
+                    fetchAds(); // Refresh the grid
+                } else {
+                    throw new Error('Failed to create');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Fehler beim Erstellen der Werbung.', 'error');
+            } finally {
+                saveMessage.style.display = 'none';
+            }
         });
     </script>
 </body>
